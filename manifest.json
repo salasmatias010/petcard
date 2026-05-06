@@ -2,7 +2,7 @@
   "name": "PetCard · Control Veterinario",
   "short_name": "PetCard",
   "description": "Control veterinario de tus mascotas",
-  "start_url": "https://salasmatias010.github.io/petcard/petcard.html",
+  "start_url": "https://salasmatias010.github.io/petcard/",
   "scope": "https://salasmatias010.github.io/petcard/",
   "display": "standalone",
   "background_color": "#f5f3ef",
