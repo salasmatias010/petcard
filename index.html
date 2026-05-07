@@ -194,6 +194,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <div class="fg"><label>Nombre</label><input id="vx-n" placeholder="Ej: Sextuple"></div>
   <div class="fg"><label>Fecha</label><input type="date" id="vx-d"></div>
   <div class="fg"><label>Estado</label><select id="vx-s"><option value="ok">OK</option><option value="warn">Vence pronto</option><option value="late">Vencida</option></select></div>
+  <div class="fg">
+    <label>Comprobante (opcional)</label>
+    <input type="file" id="vx-foto" accept="image/*" capture="environment" style="display:none" onchange="handleVaxFoto(event)">
+    <div id="vx-foto-preview" onclick="document.getElementById('vx-foto').click()"
+      style="width:100%;height:110px;background:var(--surf2);border:1.5px dashed var(--bor2);border-radius:var(--rs);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;overflow:hidden;position:relative">
+      <span style="font-size:26px">📷</span>
+      <span style="font-size:12px;color:var(--tx3)">Tocá para sacar o subir foto</span>
+    </div>
+    <button id="vx-foto-clear" onclick="clearVaxFoto()" style="display:none;margin-top:6px;width:100%;padding:7px;background:var(--red-bg);color:var(--red-tx);border:none;border-radius:var(--rs);font-size:12px;cursor:pointer;font-family:inherit">✕ Quitar foto</button>
+  </div>
   <div class="mbtns">
     <button class="btn-s" onclick="closeModal('m-vax')">Cancelar</button>
     <button class="btn-p" onclick="saveVax()">Guardar</button>
@@ -393,8 +403,10 @@ function rPerfil(p){
   var hw=(p.vaccines||[]).some(function(v){return v.s==='warn';}),hl=(p.vaccines||[]).some(function(v){return v.s==='late';});
   var bgs=(!hw&&!hl?'<span class="badge bg">Al día</span>':'')+(p.cast==='si'?'<span class="badge bb">Castrado</span>':'')+(hw?'<span class="badge ba">Vacuna por vencer</span>':'')+(hl?'<span class="badge br">Vacuna vencida</span>':'');
   var vaxH=(p.vaccines||[]).map(function(v,i){
+    var fotoBtn=v.foto?'<button onclick="verFoto(\''+v.id+'\')" style="width:28px;height:28px;border-radius:50%;background:var(--blue-bg);border:none;color:var(--blue-tx);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0" title="Ver comprobante">📄</button>':'';
     return'<div class="vrow"><div><div class="vn">'+v.n+'</div><div class="vd">'+fmt(v.d)+'</div></div>'
       +chipStatus(v.s)
+      +fotoBtn
       +'<button class="del-btn" onclick="delVax(\''+v.id+'\')" title="Eliminar">✕</button></div>';
   }).join('')||'<div class="empty">Sin vacunas</div>';
   var avDiv=p.photo
@@ -608,11 +620,33 @@ function savePet(){
   save();closeModal('m-addpet');render();
 }
 function delPet(){var p=apet();if(!p||!confirm('¿Eliminar a '+p.name+'?'))return;S.pets=S.pets.filter(function(x){return x.id!==p.id;});S.pid=S.pets.length?S.pets[0].id:null;save();render();}
+function handleVaxFoto(evt){
+  var file=evt.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var prev=document.getElementById('vx-foto-preview');
+    prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+    prev.style.padding='0';
+    document.getElementById('vx-foto-clear').style.display='block';
+    window._vxFoto=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function clearVaxFoto(){
+  window._vxFoto=null;
+  document.getElementById('vx-foto').value='';
+  var prev=document.getElementById('vx-foto-preview');
+  prev.innerHTML='<span style="font-size:26px">📷</span><span style="font-size:12px;color:var(--tx3)">Tocá para sacar o subir foto</span>';
+  prev.style.padding='';
+  document.getElementById('vx-foto-clear').style.display='none';
+}
 function saveVax(){
   var p=apet();if(!p)return;var n=document.getElementById('vx-n').value.trim();if(!n)return;
   if(!p.vaccines)p.vaccines=[];
-  p.vaccines.push({id:uid(),n:n,d:document.getElementById('vx-d').value,s:document.getElementById('vx-s').value});
+  p.vaccines.push({id:uid(),n:n,d:document.getElementById('vx-d').value,s:document.getElementById('vx-s').value,foto:window._vxFoto||null});
   document.getElementById('vx-n').value='';document.getElementById('vx-d').value='';
+  window._vxFoto=null;
+  clearVaxFoto();
   save();closeModal('m-vax');render();
 }
 function delVax(id){
@@ -807,6 +841,20 @@ function showProfile(p){
   document.getElementById('vp').classList.add('open');
 }
 
+
+function verFoto(vaxId){
+  var p=apet();if(!p)return;
+  var v=p.vaccines.find(function(x){return x.id===vaxId;});
+  if(!v||!v.foto)return;
+  var ovl=document.createElement('div');
+  ovl.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:16px';
+  ovl.innerHTML='<div style="font-size:14px;font-weight:600;color:#fff">📄 Comprobante · '+v.n+'</div>'
+    +'<img src="'+v.foto+'" style="max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain">'
+    +'<button style="padding:10px 28px;background:#fff;border:none;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Cerrar</button>';
+  ovl.querySelector('button').onclick=function(){document.body.removeChild(ovl);};
+  ovl.onclick=function(e){if(e.target===ovl)document.body.removeChild(ovl);};
+  document.body.appendChild(ovl);
+}
 
 /* ── INIT ── */
 load();render();checkScan();checkNotifBar();scheduleNotifs();
