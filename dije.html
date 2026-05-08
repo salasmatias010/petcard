@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>MiPetCard · Activá tu dije</title>
+<meta name="theme-color" content="#1D9E75">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MiPetCard">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap');
+:root{--bg:#f5f3ef;--surf:#fff;--surf2:#f0ede8;--bor:rgba(0,0,0,.10);--bor2:rgba(0,0,0,.18);--tx:#1a1814;--tx2:#6b6760;--tx3:#9e9b97;--teal:#1D9E75;--teal-bg:#E1F5EE;--teal-tx:#085041;--red:#A32D2D;--red-bg:#FCEBEB;--red-tx:#501313;--r:14px;--rs:8px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+/* screens */
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+/* loading */
+#s-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--bor);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* welcome / activate */
+.hero-banner{background:linear-gradient(135deg,#1D9E75,#2d8a5e);padding:48px 24px 32px;text-align:center;color:#fff}
+.hero-banner img{width:90px;height:90px;border-radius:22px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.hero-banner h1{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:6px}
+.hero-banner p{font-size:14px;opacity:.85;line-height:1.6}
+.content{padding:20px;max-width:480px;margin:0 auto}
+/* form */
+.card{background:var(--surf);border-radius:var(--r);border:1px solid var(--bor);padding:18px;margin-bottom:14px}
+.ctitle{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:14px}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;background:var(--surf2);border:1px solid var(--bor);border-radius:var(--rs);font-size:14px;font-family:inherit;color:var(--tx);outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--teal)}
+.fg textarea{height:72px;resize:none}
+.frow{display:flex;gap:10px}.frow .fg{flex:1}
+.btn-p{width:100%;padding:14px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:12px}
+.btn-p:hover{opacity:.9}
+.btn-s{width:100%;padding:12px;background:var(--surf2);color:var(--tx);border:1px solid var(--bor2);border-radius:var(--r);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+/* photo upload */
+.photo-up{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px}
+.photo-prev{width:90px;height:90px;border-radius:50%;background:var(--surf2);border:2px dashed var(--bor2);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden;cursor:pointer}
+.photo-prev img{width:100%;height:100%;object-fit:cover}
+/* ficha publica */
+.ficha-hero{background:linear-gradient(135deg,#1D9E75,#185FA5);padding:32px 20px;text-align:center;color:#fff}
+.ficha-avatar{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);margin-bottom:12px}
+.ficha-emoji{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 12px}
+.ficha-name{font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:4px}
+.ficha-sub{font-size:14px;opacity:.8}
+.call-btn{display:flex;align-items:center;justify-content:center;gap:12px;background:#1D9E75;color:#fff;text-decoration:none;border-radius:var(--r);padding:18px 20px;margin:16px 20px;font-size:18px;font-weight:700;box-shadow:0 4px 16px rgba(29,158,117,.4)}
+.call-btn:hover{opacity:.9}
+.drow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bor)}
+.drow:last-child{border-bottom:none}
+.dlbl{font-size:14px;color:var(--tx2)}.dval{font-size:14px;font-weight:500;text-align:right;max-width:60%}
+.badge{font-size:12px;padding:4px 11px;border-radius:20px;font-weight:500}
+.bb{background:#E6F1FB;color:#042C53}
+.br{background:#FCEBEB;color:#501313}
+.chip-ok{font-size:11px;font-weight:600;background:#E1F5EE;color:#085041;padding:3px 10px;border-radius:20px}
+.chip-warn{font-size:11px;font-weight:600;background:#FAEEDA;color:#633806;padding:3px 10px;border-radius:20px}
+.chip-late{font-size:11px;font-weight:600;background:#FCEBEB;color:#501313;padding:3px 10px;border-radius:20px}
+.vrow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bor)}
+.vrow:last-child{border-bottom:none}
+.vn{font-size:14px;font-weight:500}.vd{font-size:12px;color:var(--tx3);margin-top:2px}
+.edit-bar{background:var(--surf);border-top:1px solid var(--bor);padding:12px 20px;position:fixed;bottom:0;left:0;right:0;display:flex;gap:8px}
+.edit-bar button{flex:1;padding:11px;border-radius:var(--rs);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;border:none}
+.edit-bar .eb-edit{background:var(--teal);color:#fff}
+.edit-bar .eb-exit{background:var(--surf2);color:var(--tx);border:1px solid var(--bor2)!important;border:none}
+/* admin */
+.admin-header{background:var(--tx);color:#fff;padding:20px;display:flex;align-items:center;gap:12px}
+.admin-header h2{font-size:18px;font-weight:600}
+.code-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--bor)}
+.code-item:last-child{border-bottom:none}
+.code-badge{font-size:13px;font-weight:700;background:var(--surf2);padding:4px 12px;border-radius:20px;letter-spacing:.05em}
+.code-status{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:500}
+.cs-free{background:#E1F5EE;color:#085041}
+.cs-used{background:#E6F1FB;color:#042C53}
+/* toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1814;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;z-index:999;pointer-events:none;white-space:nowrap}
+/* error */
+.error-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;text-align:center;gap:12px}
+.error-screen .icon{font-size:48px}
+.error-screen h2{font-size:20px;font-weight:600}
+.error-screen p{font-size:14px;color:var(--tx2);line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="s-loading" class="screen active">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:var(--tx3)">Cargando...</div>
+</div>
+
+<!-- ACTIVAR DIJE (primera vez) -->
+<div id="s-activate" class="screen">
+  <div class="hero-banner">
+    <img src="icon-192.png" alt="PetCard">
+    <h1>¡Activá tu PetCard! 🐾</h1>
+    <p>Ingresá los datos de tu mascota para activar el dije.<br>Si se pierde, quien la encuentre sabrá cómo contactarte.</p>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="ctitle">Foto de la mascota</div>
+      <div class="photo-up">
+        <div class="photo-prev" id="act-photo-prev" onclick="document.getElementById('act-photo-file').click()">🐾</div>
+        <div style="font-size:12px;color:var(--tx3)">Tocá para subir foto (opcional)</div>
+        <input type="file" id="act-photo-file" accept="image/*" capture="environment" style="display:none" onchange="handleActPhoto(event)">
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Datos de la mascota</div>
+      <div class="frow">
+        <div class="fg"><label>Nombre *</label><input id="act-name" placeholder="Ej: Mochi"></div>
+        <div class="fg"><label>Emoji</label><input id="act-emoji" placeholder="🐶" maxlength="2" style="text-align:center;font-size:20px"></div>
+      </div>
+      <div class="fg"><label>Raza</label><input id="act-raza" placeholder="Golden Retriever"></div>
+      <div class="frow">
+        <div class="fg"><label>Edad</label><input id="act-edad" placeholder="3 años"></div>
+        <div class="fg"><label>Sexo</label><select id="act-sexo"><option>Macho</option><option>Hembra</option></select></div>
+      </div>
+      <div class="fg"><label>Castrado/a</label><select id="act-cast"><option value="si">Sí</option><option value="no">No</option></select></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Datos médicos</div>
+      <div class="frow">
+        <div class="fg"><label>Peso</label><input id="act-peso" placeholder="28 kg"></div>
+        <div class="fg"><label>Sangre</label><input id="act-sangre" placeholder="DEA 1.1+"></div>
+      </div>
+      <div class="fg"><label>Alergias</label><input id="act-alergia" placeholder="Ninguna"></div>
+      <div class="fg"><label>Veterinario</label><input id="act-vet" placeholder="Dr. Pérez"></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Contacto del dueño *</div>
+      <div class="fg"><label>Teléfono *</label><input type="tel" id="act-tel" placeholder="+54 221 555-1234"></div>
+      <div class="fg"><label>Teléfono alternativo</label><input type="tel" id="act-tel2" placeholder="+54 221 555-5678"></div>
+      <div class="fg"><label>Dirección</label><input id="act-dir" placeholder="Calle 50 N°123, La Plata"></div>
+    </div>
+    <button class="btn-p" onclick="activateDije()">🐾 Activar mi PetCard</button>
+    <div style="font-size:11px;color:var(--tx3);text-align:center;padding-bottom:40px">Al activar aceptás que tus datos de contacto sean visibles para quien encuentre tu mascota</div>
+  </div>
+</div>
+
+<!-- FICHA PUBLICA (mascota encontrada) -->
+<div id="s-ficha" class="screen">
+  <div class="ficha-hero">
+    <div style="font-size:12px;font-weight:600;opacity:.8;margin-bottom:16px;letter-spacing:.05em">🐾 ¿ENCONTRASTE ESTA MASCOTA?</div>
+    <div id="f-avatar"></div>
+    <div class="ficha-name" id="f-name"></div>
+    <div class="ficha-sub" id="f-sub"></div>
+  </div>
+  <a id="f-call" href="#" class="call-btn">
+    <span style="font-size:28px">📞</span>
+    <div><div style="font-size:11px;font-weight:500;opacity:.85;letter-spacing:.05em">LLAMAR AL DUEÑO</div><div id="f-tel-text"></div></div>
+  </a>
+  <div id="f-tel2-wrap" style="display:none;margin:-8px 20px 16px">
+    <a id="f-call2" href="#" style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--bor);border-radius:var(--r);padding:14px 16px;text-decoration:none;color:var(--tx)">
+      <span style="font-size:20px">📱</span>
+      <div><div style="font-size:11px;color:var(--tx2)">TELÉFONO ALTERNATIVO</div><div id="f-tel2-text" style="font-size:15px;font-weight:600"></div></div>
+    </a>
+  </div>
+  <div class="content" style="padding-bottom:20px">
+    <div id="f-alergia-warn"></div>
+    <div class="card">
+      <div class="ctitle">Datos médicos</div>
+      <div id="f-medical"></div>
+    </div>
+    <div id="f-vax-card"></div>
+  </div>
+  <div id="f-edit-bar" style="display:none" class="edit-bar">
+    <button class="eb-edit" onclick="showEdit()">✏️ Editar datos</button>
+    <button class="eb-exit" onclick="exitEdit()">Salir</button>
+  </div>
+</div>
+
+<!-- EDITAR (dueño autenticado) -->
+<div id="s-edit" class="screen">
+  <div style="background:var(--tx);padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10">
+    <div onclick="showFicha()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:18px;flex-shrink:0">←</div>
+    <div style="font-size:16px;font-weight:600;color:#fff">Editar datos</div>
+  </div>
+  <div class="content" style="padding-top:16px">
+    <div class="card">
+      <div class="ctitle">Foto</div>
+      <div class="photo-up">
+        <div class="photo-prev" id="edit-photo-prev" onclick="document.getElementById('edit-photo-file').click()">🐾</div>
+        <div style="font-size:12px;color:var(--tx3)">Tocá para cambiar foto</div>
+        <input type="file" id="edit-photo-file" accept="image/*" style="display:none" onchange="handleEditPhoto(event)">
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Datos de la mascota</div>
+      <div class="frow">
+        <div class="fg"><label>Nombre</label><input id="edit-name"></div>
+        <div class="fg"><label>Emoji</label><input id="edit-emoji" maxlength="2" style="text-align:center;font-size:20px"></div>
+      </div>
+      <div class="fg"><label>Raza</label><input id="edit-raza"></div>
+      <div class="frow">
+        <div class="fg"><label>Edad</label><input id="edit-edad"></div>
+        <div class="fg"><label>Sexo</label><select id="edit-sexo"><option>Macho</option><option>Hembra</option></select></div>
+      </div>
+      <div class="fg"><label>Castrado/a</label><select id="edit-cast"><option value="si">Sí</option><option value="no">No</option></select></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Datos médicos</div>
+      <div class="frow">
+        <div class="fg"><label>Peso</label><input id="edit-peso"></div>
+        <div class="fg"><label>Sangre</label><input id="edit-sangre"></div>
+      </div>
+      <div class="fg"><label>Alergias</label><input id="edit-alergia"></div>
+      <div class="fg"><label>Veterinario</label><input id="edit-vet"></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Contacto</div>
+      <div class="fg"><label>Teléfono</label><input type="tel" id="edit-tel"></div>
+      <div class="fg"><label>Teléfono alternativo</label><input type="tel" id="edit-tel2"></div>
+      <div class="fg"><label>Dirección</label><input id="edit-dir"></div>
+    </div>
+    <button class="btn-p" onclick="saveEdit()">💾 Guardar cambios</button>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="s-admin" class="screen">
+  <div class="admin-header">
+    <div style="font-size:24px">⚙️</div>
+    <h2>Panel Admin · PetCard</h2>
+  </div>
+  <div class="content" style="padding-top:16px">
+    <div class="card">
+      <div class="ctitle">Generar códigos de dijes</div>
+      <div class="fg"><label>Cantidad a generar</label><input type="number" id="admin-qty" value="10" min="1" max="100"></div>
+      <div class="fg"><label>Prefijo</label><input id="admin-prefix" value="PC" maxlength="4"></div>
+      <button class="btn-p" onclick="genCodes()">⚡ Generar códigos</button>
+    </div>
+    <div class="card">
+      <div class="ctitle">Códigos generados</div>
+      <div id="admin-codes-list"><div style="text-align:center;padding:20px;color:var(--tx3);font-size:13px">Cargando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Imprimir QRs para dijes</div>
+      <button class="btn-p" onclick="printAllQRs()">🖨 Imprimir todos los QRs</button>
+    </div>
+  </div>
+</div>
+
+<!-- ERROR -->
+<div id="s-error" class="screen">
+  <div class="error-screen">
+    <div class="icon">😕</div>
+    <h2>Código no encontrado</h2>
+    <p>Este código de dije no existe o no está registrado.<br>Si compraste un dije PetCard contactá al vendedor.</p>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC_sERFBVgb9PMsGMtGiltcgycxoGqVZLg",
+  authDomain: "mipetcard.firebaseapp.com",
+  projectId: "mipetcard",
+  storageBucket: "mipetcard.firebasestorage.app",
+  messagingSenderId: "720369332644",
+  appId: "1:720369332644:web:f71bd826ab4d3412211131"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── GLOBALS ──
+var currentCode = null;
+var currentPet = null;
+var isOwner = false;
+var editPhotoTemp = null;
+var actPhotoTemp = null;
+const ADMIN_CODE = 'PC-ADMIN-2024'; // código secreto para acceder al admin
+
+// ── UTILS ──
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function toast(msg){ var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(()=>document.body.removeChild(t),400)},2000); }
+function fmt(ds){ if(!ds)return''; try{var d=new Date(ds+'T12:00:00');return d.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return ds;} }
+function chipStatus(s){ if(s==='ok')return'<span class="chip-ok">OK</span>'; if(s==='warn')return'<span class="chip-warn">Vence pronto</span>'; return'<span class="chip-late">Vencida</span>'; }
+
+// ── INIT ──
+async function init(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const admin = params.get('admin');
+
+  if(admin === ADMIN_CODE){ show('s-admin'); loadAdminCodes(); return; }
+  if(!code){ show('s-error'); return; }
+
+  currentCode = code.toUpperCase();
+
+  try{
+    const ref = doc(db, 'dijes', currentCode);
+    const snap = await getDoc(ref);
+
+    if(!snap.exists()){ show('s-error'); return; }
+
+    const data = snap.data();
+
+    if(!data.activated){
+      // Primera vez — mostrar formulario de activación
+      show('s-activate');
+    } else {
+      // Ya activado — mostrar ficha
+      currentPet = data.pet;
+      // Verificar si es el dueño (mismo dispositivo)
+      const ownerKey = localStorage.getItem('petcard_owner_'+currentCode);
+      if(ownerKey === data.ownerKey){
+        isOwner = true;
+      }
+      renderFicha();
+      show('s-ficha');
+    }
+  } catch(e){
+    console.error(e);
+    show('s-error');
+  }
+}
+
+// ── ACTIVAR DIJE ──
+window.handleActPhoto = function(evt){
+  var file=evt.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    actPhotoTemp=e.target.result;
+    var prev=document.getElementById('act-photo-prev');
+    prev.innerHTML='<img src="'+e.target.result+'">';
+  };
+  reader.readAsDataURL(file);
+}
+
+window.activateDije = async function(){
+  var name=document.getElementById('act-name').value.trim();
+  var tel=document.getElementById('act-tel').value.trim();
+  if(!name||!tel){ toast('⚠️ Nombre y teléfono son obligatorios'); return; }
+
+  var btn=document.querySelector('#s-activate .btn-p');
+  btn.textContent='Guardando...';btn.disabled=true;
+
+  var ownerKey = Math.random().toString(36).slice(2)+Date.now().toString(36);
+  var pet = {
+    name, emoji: document.getElementById('act-emoji').value.trim()||'🐾',
+    photo: actPhotoTemp||null,
+    raza: document.getElementById('act-raza').value.trim(),
+    edad: document.getElementById('act-edad').value.trim(),
+    sexo: document.getElementById('act-sexo').value,
+    cast: document.getElementById('act-cast').value,
+    peso: document.getElementById('act-peso').value.trim(),
+    sangre: document.getElementById('act-sangre').value.trim(),
+    alergia: document.getElementById('act-alergia').value.trim()||'Ninguna',
+    vet: document.getElementById('act-vet').value.trim(),
+    tel, tel2: document.getElementById('act-tel2').value.trim(),
+    dir: document.getElementById('act-dir').value.trim(),
+    vaccines: [], history: []
+  };
+
+  try{
+    await setDoc(doc(db,'dijes',currentCode),{ activated:true, ownerKey, pet, createdAt: new Date().toISOString() });
+    localStorage.setItem('petcard_owner_'+currentCode, ownerKey);
+    currentPet=pet; isOwner=true;
+    renderFicha(); show('s-ficha');
+    toast('¡PetCard activada! 🐾');
+  }catch(e){
+    console.error(e);
+    toast('Error al guardar. Intentá de nuevo.');
+    btn.textContent='🐾 Activar mi PetCard';btn.disabled=false;
+  }
+}
+
+// ── RENDER FICHA ──
+function renderFicha(){
+  var p=currentPet;
+  // Avatar
+  var avatarEl=p.photo
+    ?'<img class="ficha-avatar" src="'+p.photo+'">'
+    :'<div class="ficha-emoji">'+p.emoji+'</div>';
+  document.getElementById('f-avatar').innerHTML=avatarEl;
+  document.getElementById('f-name').textContent=p.name;
+  document.getElementById('f-sub').textContent=(p.raza||'')+(p.edad?' · '+p.edad:'')+(p.sexo?' · '+p.sexo:'');
+  // Call button
+  document.getElementById('f-call').href='tel:'+p.tel;
+  document.getElementById('f-tel-text').textContent=p.tel;
+  // Tel2
+  if(p.tel2){
+    document.getElementById('f-tel2-wrap').style.display='block';
+    document.getElementById('f-call2').href='tel:'+p.tel2;
+    document.getElementById('f-tel2-text').textContent=p.tel2;
+  }
+  // Alergia warning
+  var alWrap=document.getElementById('f-alergia-warn');
+  if(p.alergia&&p.alergia!=='Ninguna'){
+    alWrap.innerHTML='<div style="background:#FCEBEB;border:1px solid rgba(163,45,45,.2);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center"><span style="font-size:22px">⚠️</span><div><div style="font-size:12px;font-weight:600;color:#A32D2D">ALERGIA</div><div style="font-size:14px;color:#501313;font-weight:500">'+p.alergia+'</div></div></div>';
+  } else alWrap.innerHTML='';
+  // Medical
+  var med='';
+  if(p.peso)med+='<div class="drow"><span class="dlbl">Peso</span><span class="dval">'+p.peso+'</span></div>';
+  if(p.sangre)med+='<div class="drow"><span class="dlbl">Sangre</span><span class="dval">'+p.sangre+'</span></div>';
+  if(p.vet)med+='<div class="drow"><span class="dlbl">Veterinario</span><span class="dval">'+p.vet+'</span></div>';
+  if(p.cast==='si')med+='<div class="drow"><span class="dlbl">Castrado/a</span><span class="dval">Sí</span></div>';
+  if(p.dir)med+='<div class="drow"><span class="dlbl">Dirección</span><span class="dval">'+p.dir+'</span></div>';
+  document.getElementById('f-medical').innerHTML=med||'<div style="color:var(--tx3);font-size:13px;text-align:center;padding:8px">Sin datos médicos</div>';
+  // Vaccines
+  var vaxWrap=document.getElementById('f-vax-card');
+  if(p.vaccines&&p.vaccines.length){
+    var vaxH=p.vaccines.map(v=>'<div class="vrow"><div><div class="vn">'+v.n+'</div><div class="vd">'+fmt(v.d)+'</div></div>'+chipStatus(v.s)+'</div>').join('');
+    vaxWrap.innerHTML='<div class="card" style="margin-bottom:14px"><div class="ctitle">Vacunas</div>'+vaxH+'</div>';
+  } else vaxWrap.innerHTML='';
+  // Edit bar for owner
+  document.getElementById('f-edit-bar').style.display=isOwner?'flex':'none';
+}
+
+// ── EDIT ──
+window.showEdit = function(){
+  var p=currentPet;
+  document.getElementById('edit-name').value=p.name||'';
+  document.getElementById('edit-emoji').value=p.emoji||'🐾';
+  document.getElementById('edit-raza').value=p.raza||'';
+  document.getElementById('edit-edad').value=p.edad||'';
+  document.getElementById('edit-sexo').value=p.sexo||'Macho';
+  document.getElementById('edit-cast').value=p.cast||'si';
+  document.getElementById('edit-peso').value=p.peso||'';
+  document.getElementById('edit-sangre').value=p.sangre||'';
+  document.getElementById('edit-alergia').value=p.alergia||'';
+  document.getElementById('edit-vet').value=p.vet||'';
+  document.getElementById('edit-tel').value=p.tel||'';
+  document.getElementById('edit-tel2').value=p.tel2||'';
+  document.getElementById('edit-dir').value=p.dir||'';
+  var prev=document.getElementById('edit-photo-prev');
+  prev.innerHTML=p.photo?'<img src="'+p.photo+'">':'🐾';
+  editPhotoTemp=p.photo||null;
+  show('s-edit');
+}
+window.showFicha = function(){ renderFicha(); show('s-ficha'); }
+window.exitEdit = function(){ show('s-ficha'); }
+
+window.handleEditPhoto = function(evt){
+  var file=evt.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    editPhotoTemp=e.target.result;
+    document.getElementById('edit-photo-prev').innerHTML='<img src="'+e.target.result+'">';
+  };
+  reader.readAsDataURL(file);
+}
+
+window.saveEdit = async function(){
+  var btn=document.querySelector('#s-edit .btn-p');
+  btn.textContent='Guardando...';btn.disabled=true;
+  currentPet={
+    ...currentPet,
+    name: document.getElementById('edit-name').value.trim()||currentPet.name,
+    emoji: document.getElementById('edit-emoji').value.trim()||'🐾',
+    photo: editPhotoTemp,
+    raza: document.getElementById('edit-raza').value.trim(),
+    edad: document.getElementById('edit-edad').value.trim(),
+    sexo: document.getElementById('edit-sexo').value,
+    cast: document.getElementById('edit-cast').value,
+    peso: document.getElementById('edit-peso').value.trim(),
+    sangre: document.getElementById('edit-sangre').value.trim(),
+    alergia: document.getElementById('edit-alergia').value.trim()||'Ninguna',
+    vet: document.getElementById('edit-vet').value.trim(),
+    tel: document.getElementById('edit-tel').value.trim(),
+    tel2: document.getElementById('edit-tel2').value.trim(),
+    dir: document.getElementById('edit-dir').value.trim(),
+  };
+  try{
+    const ref=doc(db,'dijes',currentCode);
+    const snap=await getDoc(ref);
+    await setDoc(ref,{...snap.data(), pet:currentPet, updatedAt:new Date().toISOString()});
+    toast('✅ Datos guardados');
+    renderFicha(); show('s-ficha');
+  }catch(e){
+    toast('Error al guardar');
+    btn.textContent='💾 Guardar cambios';btn.disabled=false;
+  }
+}
+
+// ── ADMIN ──
+async function loadAdminCodes(){
+  try{
+    const snap=await getDocs(collection(db,'dijes'));
+    var html='';
+    var codes=[];
+    snap.forEach(d=>{ codes.push({id:d.id,...d.data()}); });
+    codes.sort((a,b)=>a.id.localeCompare(b.id));
+    if(!codes.length){ document.getElementById('admin-codes-list').innerHTML='<div style="text-align:center;padding:20px;color:var(--tx3);font-size:13px">No hay códigos aún</div>'; return; }
+    codes.forEach(c=>{
+      var status=c.activated?'<span class="code-status cs-used">Activado</span>':'<span class="code-status cs-free">Disponible</span>';
+      var petName=c.activated&&c.pet?c.pet.name:'—';
+      html+='<div class="code-item"><div><div class="code-badge">'+c.id+'</div><div style="font-size:12px;color:var(--tx3);margin-top:3px">'+petName+'</div></div>'+status+'</div>';
+    });
+    document.getElementById('admin-codes-list').innerHTML=html;
+    window._adminCodes=codes;
+  }catch(e){ document.getElementById('admin-codes-list').innerHTML='<div style="color:red;font-size:13px">Error cargando códigos</div>'; }
+}
+
+window.genCodes = async function(){
+  var qty=parseInt(document.getElementById('admin-qty').value)||10;
+  var prefix=document.getElementById('admin-prefix').value.trim().toUpperCase()||'PC';
+  // Get existing to find max number
+  var snap=await getDocs(collection(db,'dijes'));
+  var existing=[];snap.forEach(d=>existing.push(d.id));
+  var maxNum=0;
+  existing.forEach(id=>{ var n=parseInt(id.replace(prefix+'-','')); if(!isNaN(n)&&n>maxNum)maxNum=n; });
+  var created=0;
+  for(var i=1;i<=qty;i++){
+    var num=String(maxNum+i).padStart(4,'0');
+    var code=prefix+'-'+num;
+    if(!existing.includes(code)){
+      await setDoc(doc(db,'dijes',code),{ activated:false, createdAt:new Date().toISOString() });
+      created++;
+    }
+  }
+  toast('✅ '+created+' códigos generados');
+  loadAdminCodes();
+}
+
+window.printAllQRs = function(){
+  if(!window._adminCodes||!window._adminCodes.length){ toast('Cargá los códigos primero'); return; }
+  var baseUrl=location.origin+location.pathname.replace('dije.html','')+'dije.html';
+  var html='<!DOCTYPE html><html><head><title>QRs PetCard</title>'
+    +'<style>@page{size:A4;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif}'
+    +'.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm;padding:4mm}'
+    +'.item{border:1px solid #ddd;border-radius:8px;padding:4mm;text-align:center;page-break-inside:avoid}'
+    +'.item svg{width:32mm;height:32mm}.code{font-size:8pt;font-weight:700;margin-top:2mm;color:#1a1814}'
+    +'</style></head><body><div class="grid">';
+  window._adminCodes.filter(c=>!c.activated).forEach(c=>{
+    var url=baseUrl+'?code='+c.id;
+    html+='<div class="item"><div id="qr-'+c.id+'"></div><div class="code">'+c.id+'</div></div>';
+  });
+  html+='</div></body></html>';
+  var w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  toast('Abrí la pestaña e imprimí');
+}
+
+// Start
+init();
+</script>
+</body>
+</html>
