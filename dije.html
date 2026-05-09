@@ -324,27 +324,26 @@ function printAllQRs(){
   var items='';
   codes.forEach(function(c){
     var url=baseUrl+'?code='+c.id;
-    var svg=makeQRImg(url);
-    items+='<div class="item"><div style="width:25mm;height:25mm;margin:0 auto">'+svg+'</div><div class="code">'+c.id+'</div></div>';
+    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(url);
+    items+='<div class="item">'
+      +'<img src="'+qrUrl+'" style="width:25mm;height:25mm;display:block;margin:0 auto">'
+      +'<div class="code">'+c.id+'</div>'
+      +'</div>';
   });
-  var html='<!DOCTYPE html><html><head><title>QRs PetCard</title>'
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>QRs PetCard</title>'
     +'<style>@page{size:A4;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif}'
     +'.title{text-align:center;padding:4mm 0 6mm;font-size:12pt;font-weight:700;color:#1D9E75}'
     +'.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8mm}'
     +'.item{border:1.5px solid #1a1814;border-radius:8px;padding:4mm;text-align:center;page-break-inside:avoid}'
-    +'.item svg{width:25mm;height:25mm;display:block}'
     +'.code{font-size:8pt;font-weight:700;margin-top:3mm;color:#1a1814;letter-spacing:.05em}'
     +'</style></head><body>'
     +'<div class="title">🐾 MiPetCard · QRs para dijes</div>'
     +'<div class="grid">'+items+'</div>'
-    +'<script>window.onload=function(){window.print();}<\/script>'
-    +'</body></html>';
-  var blob=new Blob([html],{type:'text/html'});
-  var burl=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=burl;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(burl);},5000);
-  showToast('🖨 Abrí la pestaña e imprimí');
+    +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},2000);}<\/script>'
+    +'</body></html>');
+  w.document.close();
+  showToast('🖨 Esperá que carguen los QRs y luego imprimí');
 }
 
 function showToast(msg){
