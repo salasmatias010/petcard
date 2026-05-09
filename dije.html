@@ -238,11 +238,38 @@ function printAllQRs(){
   var codes=window._adminCodes.filter(function(c){return !c.activated;});
   if(!codes.length){showToast('No hay códigos disponibles');return;}
   var baseUrl=location.origin+location.pathname;
-  var items='';
-  codes.forEach(function(c){
+
+  // Preload all QR images as base64 then print
+  var total=codes.length, loaded=0, results=[];
+  showToast('Generando QRs... espera');
+
+  codes.forEach(function(c, idx){
     var url=baseUrl+'?code='+c.id;
-    var qrSrc='https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl='+encodeURIComponent(url)+'&choe=UTF-8';
-    items+='<div class="item"><img src="'+qrSrc+'" style="width:25mm;height:25mm;display:block;margin:0 auto"><div class="code">'+c.id+'</div></div>';
+    var qrSrc='https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl='+encodeURIComponent(url)+'&choe=UTF-8';
+    var img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      canvas.width=img.width;canvas.height=img.height;
+      canvas.getContext('2d').drawImage(img,0,0);
+      results[idx]={id:c.id, src:canvas.toDataURL('image/png')};
+      loaded++;
+      if(loaded===total) doPrint(results);
+    };
+    img.onerror=function(){
+      // fallback: use src directly
+      results[idx]={id:c.id, src:qrSrc};
+      loaded++;
+      if(loaded===total) doPrint(results);
+    };
+    img.src=qrSrc;
+  });
+}
+
+function doPrint(results){
+  var items='';
+  results.forEach(function(r){
+    items+='<div class="item"><img src="'+r.src+'" style="width:25mm;height:25mm;display:block;margin:0 auto"><div class="code">'+r.id+'</div></div>';
   });
   var html='<!DOCTYPE html><html><head><title>QRs PetCard</title>'
     +'<style>@page{size:A4;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif}'
@@ -253,14 +280,13 @@ function printAllQRs(){
     +'</style></head><body>'
     +'<div class="title">🐾 MiPetCard · QRs para dijes</div>'
     +'<div class="grid">'+items+'</div>'
-    +'<script>window.onload=function(){setTimeout(function(){window.print();},1500);}<\/script>'
+    +'<script>window.onload=function(){window.print();}<\/script>'
     +'</body></html>';
   var blob=new Blob([html],{type:'text/html'});
   var burl=URL.createObjectURL(blob);
   var a=document.createElement('a');
   a.href=burl;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(function(){URL.revokeObjectURL(burl);},5000);
-  showToast('🖨 Abrí la pestaña e imprimí');
 }
 
 function showToast(msg){
