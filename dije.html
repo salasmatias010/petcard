@@ -226,60 +226,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 </div>
 
 <script>
-/* ── QR GENERATOR ── */
-function makeQRSvg(url) {
-  var EXP=new Array(256),LOG=new Array(256);
-  for(var i=0;i<8;i++)EXP[i]=1<<i;
-  for(var i=8;i<256;i++)EXP[i]=EXP[i-4]^EXP[i-5]^EXP[i-6]^EXP[i-8];
-  for(var i=0;i<255;i++)LOG[EXP[i]]=i;
-  function ge(n){while(n<0)n+=255;while(n>=256)n-=255;return EXP[n];}
-  function gl(n){if(n<1)throw 0;return LOG[n];}
-  function Poly(num,sh){var o=0;while(o<num.length&&num[o]===0)o++;this.num=[];for(var i=0;i<num.length-o+sh;i++)this.num[i]=(i<num.length-o)?num[i+o]:0;}
-  Poly.prototype.get=function(i){return this.num[i]||0;};
-  Poly.prototype.len=function(){return this.num.length;};
-  Poly.prototype.mul=function(e){var n=new Array(this.len()+e.len()-1).fill(0);for(var i=0;i<this.len();i++)for(var j=0;j<e.len();j++)n[i+j]^=ge(gl(this.get(i))+gl(e.get(j)));return new Poly(n,0);};
-  Poly.prototype.mod=function(e){if(this.len()-e.len()<0)return this;var r=gl(this.get(0))-gl(e.get(0)),n=this.num.slice();for(var i=0;i<e.len();i++)n[i]^=ge(gl(e.get(i))+r);return new Poly(n,0).mod(e);};
-  function errP(l){var a=new Poly([1],0);for(var i=0;i<l;i++)a=a.mul(new Poly([1,ge(i)],0));return a;}
-  var PP=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]];
-  var G15=(1<<10)|(1<<8)|(1<<5)|(1<<4)|(1<<2)|(1<<1)|(1<<0),G18=(1<<12)|(1<<11)|(1<<10)|(1<<9)|(1<<8)|(1<<5)|(1<<2)|(1<<0),G15M=(1<<14)|(1<<12)|(1<<10)|(1<<4)|(1<<1);
-  function bd(d){var b=0;while(d){b++;d>>>=1;}return b;}
-  function bti(d){var x=d<<10;while(bd(x)-bd(G15)>=0)x^=(G15<<(bd(x)-bd(G15)));return((d<<10)|x)^G15M;}
-  function btn(d){var x=d<<12;while(bd(x)-bd(G18)>=0)x^=(G18<<(bd(x)-bd(G18)));return(d<<12)|x;}
-  var RST=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[2,50,32,1,50,33],[2,50,32],[2,50,24,2,50,25],[4,25,9],[1,134,108,1,84,67],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16]];
-  function rsb(tn,el){var t=RST[(tn-1)*4+el],l=Math.floor(t.length/3),r=[];for(var i=0;i<l;i++){var c=t[i*3],tc=t[i*3+1],dc=t[i*3+2];for(var j=0;j<c;j++)r.push({total:tc,data:dc});}return r;}
-  function s2b(s){var b=[];for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if(c>0x800){b.push(0xE0|((c&0xF000)>>>12),0x80|((c&0xFC0)>>>6),0x80|(c&0x3F));}else if(c>0x80){b.push(0xC0|((c&0x7C0)>>>6),0x80|(c&0x3F));}else b.push(c);}return b;}
-  function lb(t){return t<10?8:16;}
-  function cdat(tn,el,data){
-    var rs=rsb(tn,el),buf={b:[],n:0,put:function(v,l){for(var i=0;i<l;i++){var idx=Math.floor(this.n/8);if(this.b.length<=idx)this.b.push(0);if((v>>>(l-i-1))&1)this.b[idx]|=0x80>>>(this.n%8);this.n++;}},len:function(){return this.n;}};
-    var bytes=s2b(data);buf.put(4,4);buf.put(bytes.length,lb(tn));for(var i=0;i<bytes.length;i++)buf.put(bytes[i],8);
-    var tot=0;for(var i=0;i<rs.length;i++)tot+=rs[i].data;
-    if(buf.len()+4<=tot*8)buf.put(0,4);
-    while(buf.len()%8!==0)buf.put(0,1);
-    while(buf.len()<tot*8){buf.put(0xEC,8);if(buf.len()>=tot*8)break;buf.put(0x11,8);}
-    var off=0,mdc=0,mec=0,dc=[],ec=[];
-    for(var r=0;r<rs.length;r++){var dC=rs[r].data,eC=rs[r].total-dC;mdc=Math.max(mdc,dC);mec=Math.max(mec,eC);dc[r]=[];for(var i=0;i<dC;i++)dc[r].push(0xff&buf.b[off++]);var mp=new Poly(dc[r],errP(eC).len()-1).mod(errP(eC));ec[r]=[];for(var i=0;i<eC;i++){var mi=i+mp.len()-eC;ec[r].push(mi>=0?mp.get(mi):0);}}
-    var out=[],idx=0;
-    for(var i=0;i<mdc;i++)for(var r=0;r<rs.length;r++)if(i<dc[r].length)out.push(dc[r][i]);
-    for(var i=0;i<mec;i++)for(var r=0;r<rs.length;r++)if(i<ec[r].length)out.push(ec[r][i]);
-    return out;
-  }
-  function gm(p,r,c){switch(p){case 0:return(r+c)%2===0;case 1:return r%2===0;case 2:return c%3===0;case 3:return(r+c)%3===0;case 4:return(Math.floor(r/2)+Math.floor(c/3))%2===0;case 5:return(r*c)%2+(r*c)%3===0;case 6:return((r*c)%2+(r*c)%3)%2===0;case 7:return((r*c)%3+(r+c)%2)%2===0;}return false;}
-  function autoV(u,el){for(var v=1;v<=40;v++){try{cdat(v,el,u);return v;}catch(e){}}return null;}
-  var EL=0;var tn=autoV(url,EL);if(!tn)throw new Error("URL too long");
-  var mc=tn*4+17;
-  function mkm(){var m=[];for(var i=0;i<mc;i++){m.push([]);for(var j=0;j<mc;j++)m[i].push(null);}return m;}
-  function probe(m,r,c){for(var dr=-1;dr<=7;dr++){if(r+dr<=-1||mc<=r+dr)continue;for(var dc=-1;dc<=7;dc++){if(c+dc<=-1||mc<=c+dc)continue;m[r+dr][c+dc]=(0<=dr&&dr<=6&&(dc===0||dc===6))||(0<=dc&&dc<=6&&(dr===0||dr===6))||(2<=dr&&dr<=4&&2<=dc&&dc<=4);}}}
-  function setup(m){probe(m,0,0);probe(m,mc-7,0);probe(m,0,mc-7);var pos=PP[tn-1]||[];for(var i=0;i<pos.length;i++)for(var j=0;j<pos.length;j++){var r=pos[i],c=pos[j];if(m[r][c]!==null)continue;for(var dr=-2;dr<=2;dr++)for(var dc=-2;dc<=2;dc++)m[r+dr][c+dc]=(dr===-2||dr===2||dc===-2||dc===2||(dr===0&&dc===0));}for(var r=8;r<mc-8;r++)if(m[r][6]===null)m[r][6]=(r%2===0);for(var c=8;c<mc-8;c++)if(m[6][c]===null)m[6][c]=(c%2===0);if(tn>=7){var bits=btn(tn);for(var i=0;i<18;i++){var v=((bits>>i)&1)===1;m[Math.floor(i/3)][i%3+mc-8-3]=v;m[i%3+mc-8-3][Math.floor(i/3)]=v;}}}
-  function ti(m,test,mask){var d=(EL<<3)|mask,bits=bti(d);for(var i=0;i<15;i++){var v=!test&&((bits>>i)&1)===1;if(i<6)m[i][8]=v;else if(i<8)m[i+1][8]=v;else m[mc-15+i][8]=v;}for(var i=0;i<15;i++){var v=!test&&((bits>>i)&1)===1;if(i<8)m[8][mc-i-1]=v;else if(i<9)m[8][15-i-1+1]=v;else m[8][15-i-1]=v;}m[mc-8][8]=!test;}
-  function mapd(m,dat,mask){var inc=-1,row=mc-1,bi=7,by=0;for(var col=mc-1;col>0;col-=2){if(col===6)col--;while(true){for(var c2=0;c2<2;c2++){if(m[row][col-c2]===null){var dk=by<dat.length?((dat[by]>>>bi)&1)===1:false;if(gm(mask,row,col-c2))dk=!dk;m[row][col-c2]=dk;if(--bi===-1){by++;bi=7;}}}row+=inc;if(row<0||mc<=row){row-=inc;inc=-inc;break;}}}}
-  function lp(m){var l=0;for(var r=0;r<mc;r++)for(var c=0;c<mc;c++){var sc=0,dk=m[r][c];for(var rr=-1;rr<=1;rr++)for(var cc=-1;cc<=1;cc++){if(!rr&&!cc)continue;if(r+rr>=0&&r+rr<mc&&c+cc>=0&&c+cc<mc&&dk===m[r+rr][c+cc])sc++;}if(sc>5)l+=3+sc-5;}return l;}
-  var best=0,bestL=1e9,snap;
-  for(var mask=0;mask<8;mask++){var m=mkm();setup(m);ti(m,true,mask);mapd(m,cdat(tn,EL,url),mask);var l=lp(m);if(l<bestL){bestL=l;best=mask;snap=m.map(function(r){return r.slice();});}}
-  var mod=snap;ti(mod,false,best);mapd(mod,cdat(tn,EL,url),best);
-  var cs=4,mg=8,sz=mc*cs+mg*2;
-  var s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+sz+' '+sz+'"><rect width="'+sz+'" height="'+sz+'" fill="white"/>';
-  for(var r=0;r<mc;r++)for(var c=0;c<mc;c++)if(mod[r][c])s+='<rect x="'+(mg+c*cs)+'" y="'+(mg+r*cs)+'" width="'+cs+'" height="'+cs+'" fill="#1a1814"/>';
-  return s+'</svg>';
+/* ── QR GENERATOR via Google Charts API ── */
+function makeQRImg(url, size) {
+  size = size || 200;
+  return '<img src="https://chart.googleapis.com/chart?chs='+size+'x'+size+'&cht=qr&chl='+encodeURIComponent(url)+'&choe=UTF-8" style="width:100%;height:auto;display:block">';
 }
 
 /* ── PRINT QRs ── */
@@ -291,29 +241,25 @@ function printAllQRs(){
   var items='';
   codes.forEach(function(c){
     var url=baseUrl+'?code='+c.id;
-    try{
-      var svg=makeQRSvg(url);
-      items+='<div class="item">'+svg+'<div class="code">'+c.id+'</div></div>';
-    }catch(e){
-      items+='<div class="item"><div style="width:40mm;height:40mm;background:#eee;display:flex;align-items:center;justify-content:center;font-size:9pt">Error</div><div class="code">'+c.id+'</div></div>';
-    }
+    var qrSrc='https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl='+encodeURIComponent(url)+'&choe=UTF-8';
+    items+='<div class="item"><img src="'+qrSrc+'" style="width:25mm;height:25mm;display:block;margin:0 auto"><div class="code">'+c.id+'</div></div>';
   });
   var html='<!DOCTYPE html><html><head><title>QRs PetCard</title>'
     +'<style>@page{size:A4;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif}'
     +'.title{text-align:center;padding:4mm 0 6mm;font-size:12pt;font-weight:700;color:#1D9E75}'
     +'.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8mm}'
     +'.item{border:1.5px solid #1a1814;border-radius:8px;padding:4mm;text-align:center;page-break-inside:avoid}'
-    +'.item svg{width:40mm;height:40mm;display:block;margin:0 auto}'
     +'.code{font-size:8pt;font-weight:700;margin-top:3mm;color:#1a1814;letter-spacing:.05em}'
     +'</style></head><body>'
     +'<div class="title">🐾 MiPetCard · QRs para dijes</div>'
     +'<div class="grid">'+items+'</div>'
+    +'<script>window.onload=function(){setTimeout(function(){window.print();},1500);}<\/script>'
     +'</body></html>';
   var blob=new Blob([html],{type:'text/html'});
   var burl=URL.createObjectURL(blob);
   var a=document.createElement('a');
   a.href=burl;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(burl);},3000);
+  setTimeout(function(){URL.revokeObjectURL(burl);},5000);
   showToast('🖨 Abrí la pestaña e imprimí');
 }
 
