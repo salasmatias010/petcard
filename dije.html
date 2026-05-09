@@ -264,8 +264,9 @@ function makeQRSvg(url) {
     return out;
   }
   function gm(p,r,c){switch(p){case 0:return(r+c)%2===0;case 1:return r%2===0;case 2:return c%3===0;case 3:return(r+c)%3===0;case 4:return(Math.floor(r/2)+Math.floor(c/3))%2===0;case 5:return(r*c)%2+(r*c)%3===0;case 6:return((r*c)%2+(r*c)%3)%2===0;case 7:return((r*c)%3+(r+c)%2)%2===0;}return false;}
-  function autoV(u){for(var v=1;v<=40;v++){try{cdat(v,0,u);return v;}catch(e){}}throw 0;}
-  var tn=autoV(url),mc=tn*4+17,EL=0;
+  function autoV(u,el){for(var v=1;v<=40;v++){try{cdat(v,el,u);return v;}catch(e){}}return null;}
+  var EL=0;var tn=autoV(url,EL);if(!tn)throw new Error("URL too long");
+  var mc=tn*4+17;
   function mkm(){var m=[];for(var i=0;i<mc;i++){m.push([]);for(var j=0;j<mc;j++)m[i].push(null);}return m;}
   function probe(m,r,c){for(var dr=-1;dr<=7;dr++){if(r+dr<=-1||mc<=r+dr)continue;for(var dc=-1;dc<=7;dc++){if(c+dc<=-1||mc<=c+dc)continue;m[r+dr][c+dc]=(0<=dr&&dr<=6&&(dc===0||dc===6))||(0<=dc&&dc<=6&&(dr===0||dr===6))||(2<=dr&&dr<=4&&2<=dc&&dc<=4);}}}
   function setup(m){probe(m,0,0);probe(m,mc-7,0);probe(m,0,mc-7);var pos=PP[tn-1]||[];for(var i=0;i<pos.length;i++)for(var j=0;j<pos.length;j++){var r=pos[i],c=pos[j];if(m[r][c]!==null)continue;for(var dr=-2;dr<=2;dr++)for(var dc=-2;dc<=2;dc++)m[r+dr][c+dc]=(dr===-2||dr===2||dc===-2||dc===2||(dr===0&&dc===0));}for(var r=8;r<mc-8;r++)if(m[r][6]===null)m[r][6]=(r%2===0);for(var c=8;c<mc-8;c++)if(m[6][c]===null)m[6][c]=(c%2===0);if(tn>=7){var bits=btn(tn);for(var i=0;i<18;i++){var v=((bits>>i)&1)===1;m[Math.floor(i/3)][i%3+mc-8-3]=v;m[i%3+mc-8-3][Math.floor(i/3)]=v;}}}
