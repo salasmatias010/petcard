@@ -466,8 +466,8 @@ window.activateDije=async function(){
       name:pet.name, emoji:pet.emoji, photo:pet.photo,
       raza:pet.raza, edad:pet.edad, sexo:pet.sexo, cast:pet.cast,
       peso:pet.peso, sangre:pet.sangre, alergia:pet.alergia, vet:pet.vet,
-      tel:pet.tel, tel2:pet.tel2, dir:pet.dir,
-      dijeCode:currentCode  // código del dije — el QR siempre va a ser este
+      tel:pet.tel, email:pet.email, tel2:pet.tel2, dir:pet.dir,
+      dijeCode:currentCode
     };
     // Codificar con TextEncoder para manejar emojis
     var jsonStr=JSON.stringify(payload);
