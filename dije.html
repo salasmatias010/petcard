@@ -470,11 +470,11 @@ window.activateDije=async function(){
       dijeCode:currentCode
     };
     // Codificar payload de forma segura (sin emojis en base64)
-    var safePayload=Object.assign({},payload);
-    safePayload.emoji=safePayload.emoji||'🐾';
-    var jsonStr=JSON.stringify(safePayload);
-    var b64=btoa(unescape(encodeURIComponent(jsonStr)));
-    window.location.href=location.origin+'/index.html?activar='+b64;
+    // Encode payload as URL-safe base64
+    var jsonStr=JSON.stringify(payload);
+    // Use encodeURIComponent to handle all unicode including emojis
+    var encoded=encodeURIComponent(jsonStr);
+    window.location.href=location.origin+'/index.html?activar='+encoded;
   }catch(e){showToast('Error al guardar');btn.textContent='🐾 Activar mi PetCard';btn.disabled=false;}
 };
 
