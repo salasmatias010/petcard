@@ -111,6 +111,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
     <div class="card">
       <div class="ctitle">Contacto del dueño *</div>
       <div class="fg"><label>Teléfono *</label><input type="tel" id="act-tel" placeholder="+54 221 555-1234"></div>
+      <div class="fg"><label>Email (para alertas) *</label><input type="email" id="act-email" placeholder="tu@email.com"></div>
       <div class="fg"><label>Teléfono alternativo</label><input type="tel" id="act-tel2" placeholder="+54 221 555-5678"></div>
       <div class="fg"><label>Dirección</label><input id="act-dir" placeholder="Calle 50 N°123, La Plata"></div>
     </div>
@@ -352,6 +353,45 @@ function showToast(msg){
 }
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  emailjs.init('a6HcUyMhALYCoeKtu');
+  function notificarDueno(pet){
+    var fecha=new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    function enviar(ubicacion){
+      emailjs.send('service_xgjnb2u','template_qmxkiho',{
+        to_email: pet.email || 'sin-email@mipetcard.com.ar',
+        pet_name: pet.name,
+        ubicacion: ubicacion,
+        fecha: fecha,
+        tel: pet.tel
+      }).then(function(){
+        console.log('Email enviado OK');
+      }).catch(function(e){
+        console.log('Email error:', e);
+      });
+    }
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat=pos.coords.latitude.toFixed(4);
+        var lng=pos.coords.longitude.toFixed(4);
+        // Geocoding inverso para obtener ciudad
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json')
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var ciudad=d.address.city||d.address.town||d.address.village||d.address.county||'Desconocida';
+            var prov=d.address.state||'';
+            enviar(ciudad+(prov?', '+prov:'')+' ('+lat+', '+lng+')');
+          }).catch(function(){enviar('Lat: '+lat+', Lng: '+lng);});
+      },function(){
+        enviar('Ubicación no disponible');
+      });
+    } else {
+      enviar('Ubicación no disponible');
+    }
+  }
+</script>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -394,6 +434,10 @@ async function init(){
       const ok=localStorage.getItem('petcard_owner_'+currentCode);
       if(ok===data.ownerKey)isOwner=true;
       renderFicha();show('s-ficha');
+      // Si NO es el dueño → alguien encontró la mascota → mandar email
+      if(!isOwner&&data.pet&&data.pet.tel){
+        notificarDueno(data.pet);
+      }
     }
   }catch(e){console.error(e);show('s-error');}
 }
@@ -413,7 +457,7 @@ window.activateDije=async function(){
   if(!name||!tel){showToast('⚠️ Nombre y teléfono son obligatorios');return;}
   var btn=document.querySelector('#s-activate .btn-p');btn.textContent='Guardando...';btn.disabled=true;
   var ownerKey=Math.random().toString(36).slice(2)+Date.now().toString(36);
-  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
+  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',vet:document.getElementById('act-vet').value.trim(),tel,email:document.getElementById('act-email').value.trim(),tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
   try{
     await setDoc(doc(db,'dijes',currentCode),{activated:true,ownerKey,pet,createdAt:new Date().toISOString()});
     localStorage.setItem('petcard_owner_'+currentCode,ownerKey);
@@ -425,8 +469,12 @@ window.activateDije=async function(){
       tel:pet.tel, tel2:pet.tel2, dir:pet.dir,
       dijeCode:currentCode  // código del dije — el QR siempre va a ser este
     };
-    var b64=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    // Redirigir a mipetcard con los datos
+    // Codificar con TextEncoder para manejar emojis
+    var jsonStr=JSON.stringify(payload);
+    var bytes=new TextEncoder().encode(jsonStr);
+    var binary='';
+    bytes.forEach(function(b){binary+=String.fromCharCode(b);});
+    var b64=btoa(binary);
     window.location.href=location.origin+'/index.html?activar='+b64;
   }catch(e){showToast('Error al guardar');btn.textContent='🐾 Activar mi PetCard';btn.disabled=false;}
 };
