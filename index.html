@@ -1037,10 +1037,6 @@ function checkActivar(){
       var sinDije=S.pets.find(function(p){return p.name===raw.name&&!p.dijeCode;});
       if(sinDije){sinDije.dijeCode=raw.dijeCode;S.pid=sinDije.id;save();return;}
     }
-    // Vaciar lista si está vacía o solo tiene demo sin dije
-    if(S.pets.length===0||(S.pets.length===1&&!S.pets[0].dijeCode)){
-      S.pets=[];
-    }
     // Crear mascota nueva
     var p={id:uid(),name:raw.name||'Mi mascota',emoji:raw.emoji||'🐾',photo:raw.photo||null,
       raza:raw.raza||'',edad:raw.edad||'',sexo:raw.sexo||'Macho',cast:raw.cast||'no',
