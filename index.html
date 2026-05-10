@@ -183,7 +183,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <div class="fg"><label>Veterinario</label><input id="f-vet" placeholder="Dr. Pérez"></div>
   <div class="fg"><label>Alergias</label><input id="f-alergia" placeholder="Ninguna"></div>
   <div class="fg"><label>Teléfono dueño</label><input type="tel" id="f-tel" placeholder="+54 221 555-1234"></div>
-  <div class="fg"><label>Email alertas</label><input type="email" id="f-email" placeholder="tu@email.com"></div>
   <div class="fg"><label>Dirección</label><input id="f-dir" placeholder="Calle 50 N°123, La Plata"></div>
   <div class="fg"><label>Castrado/a</label><select id="f-cast"><option value="si">Sí</option><option value="no">No</option></select></div>
   <div class="mbtns">
@@ -446,7 +445,6 @@ function rPerfil(p){
     +'<div class="drow"><span class="dlbl">Veterinario</span><span class="dval">'+p.vet+'</span></div>'
     +'<div class="drow"><span class="dlbl">Alergias</span><span class="dval">'+p.alergia+'</span></div>'
     +'<div class="drow"><span class="dlbl">Teléfono dueño</span><span class="dval">'+p.tel+'</span></div>'
-    +'<div class="drow"><span class="dlbl">Email alertas</span><span class="dval">'+(p.email||'—')+'</span></div>'
     +'<div class="drow"><span class="dlbl">Dirección</span><span class="dval">'+p.dir+'</span></div>'
     +'</div>'
     +'<div class="card"><div class="ctitle">Vacunas</div>'+vaxH
@@ -667,7 +665,7 @@ function ovlClose(e,id){if(e.target===document.getElementById(id))closeModal(id)
 function openAddPet(){
   S.editId=null;S.photoTemp=null;
   document.getElementById('m-addpet-h').textContent='Nueva mascota';
-  ['f-name','f-emoji','f-raza','f-edad','f-peso','f-sangre','f-vet','f-alergia','f-tel','f-email','f-dir'].forEach(function(i){var el=document.getElementById(i);if(el)el.value='';});
+  ['f-name','f-emoji','f-raza','f-edad','f-peso','f-sangre','f-vet','f-alergia','f-tel','f-dir'].forEach(function(i){document.getElementById(i).value='';}); 
   document.getElementById('f-sexo').value='Macho';
   document.getElementById('f-cast').value='si';
   document.getElementById('photo-prev').innerHTML='🐾';
@@ -688,7 +686,6 @@ function openEdit(){
   document.getElementById('f-vet').value=p.vet;
   document.getElementById('f-alergia').value=p.alergia;
   document.getElementById('f-tel').value=p.tel;
-  var emailEl=document.getElementById('f-email');if(emailEl)emailEl.value=p.email||'';
   document.getElementById('f-dir').value=p.dir;
   document.getElementById('f-cast').value=p.cast;
   var prev=document.getElementById('photo-prev');
@@ -696,8 +693,7 @@ function openEdit(){
   openModal('m-addpet');
 }
 function savePet(){
-  var emailEl2=document.getElementById('f-email');
-  var d={name:document.getElementById('f-name').value.trim()||'Mascota',emoji:document.getElementById('f-emoji').value.trim()||'🐾',photo:S.photoTemp||null,raza:document.getElementById('f-raza').value.trim(),edad:document.getElementById('f-edad').value.trim(),sexo:document.getElementById('f-sexo').value,peso:document.getElementById('f-peso').value.trim(),sangre:document.getElementById('f-sangre').value.trim(),vet:document.getElementById('f-vet').value.trim(),alergia:document.getElementById('f-alergia').value.trim(),tel:document.getElementById('f-tel').value.trim(),email:emailEl2?emailEl2.value.trim():'',dir:document.getElementById('f-dir').value.trim(),cast:document.getElementById('f-cast').value};
+  var d={name:document.getElementById('f-name').value.trim()||'Mascota',emoji:document.getElementById('f-emoji').value.trim()||'🐾',photo:S.photoTemp||null,raza:document.getElementById('f-raza').value.trim(),edad:document.getElementById('f-edad').value.trim(),sexo:document.getElementById('f-sexo').value,peso:document.getElementById('f-peso').value.trim(),sangre:document.getElementById('f-sangre').value.trim(),vet:document.getElementById('f-vet').value.trim(),alergia:document.getElementById('f-alergia').value.trim(),tel:document.getElementById('f-tel').value.trim(),dir:document.getElementById('f-dir').value.trim(),cast:document.getElementById('f-cast').value};
   if(S.editId){var p=S.pets.find(function(x){return x.id===S.editId;});if(p)Object.assign(p,d);}
   else{d.id=uid();d.vaccines=[];d.history=[];d.reminders=[];S.pets.push(d);S.pid=d.id;}
   save();closeModal('m-addpet');render();
@@ -1052,47 +1048,23 @@ function checkActivar(){
   var activar=params.get('activar');
   if(!activar)return;
   try{
-    // Decode - try URL encoded first, then base64
-    var raw;
-    try{
-      raw=JSON.parse(decodeURIComponent(activar));
-    }catch(e1){
-      try{
-        raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
-      }catch(e2){
-        var bin=atob(activar);
-        var bytes=new Uint8Array(bin.length);
-        for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-        raw=JSON.parse(new TextDecoder().decode(bytes));
-      }
-    }
+    var bin=atob(activar);
+    var bytes=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    var raw=JSON.parse(new TextDecoder().decode(bytes));
     if(!raw||!raw.name)return;
     window.history.replaceState({},'',location.pathname);
-    // Si ya existe con este dijeCode, seleccionarla
     if(raw.dijeCode){
       var conDije=S.pets.find(function(p){return p.dijeCode===raw.dijeCode;});
       if(conDije){S.pid=conDije.id;return;}
     }
-    // Crear mascota nueva
     var p={
-      id:uid(),
-      name:raw.name,
-      emoji:raw.emoji||'🐾',
-      photo:raw.photo||null,
-      raza:raw.raza||'',
-      edad:raw.edad||'',
-      sexo:raw.sexo||'Macho',
-      cast:raw.cast||'no',
-      peso:raw.peso||'',
-      sangre:raw.sangre||'',
-      alergia:raw.alergia||'Ninguna',
-      vet:raw.vet||'',
-      tel:raw.tel||'',
-      email:raw.email||'',
-      tel2:raw.tel2||'',
-      dir:raw.dir||'',
+      id:uid(), name:raw.name, emoji:raw.emoji||'🐾', photo:raw.photo||null,
+      raza:raw.raza||'', edad:raw.edad||'', sexo:raw.sexo||'Macho', cast:raw.cast||'no',
+      peso:raw.peso||'', sangre:raw.sangre||'', alergia:raw.alergia||'Ninguna',
+      vet:raw.vet||'', tel:raw.tel||'', tel2:raw.tel2||'', dir:raw.dir||'',
       dijeCode:raw.dijeCode||null,
-      vaccines:[],history:[],reminders:[],pesos:[]
+      vaccines:[], history:[], reminders:[], pesos:[]
     };
     S.pets.push(p);
     S.pid=p.id;
