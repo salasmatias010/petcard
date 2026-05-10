@@ -367,7 +367,9 @@ function load(){
   if(!S.pets||!S.pets.length){
     try{var old=localStorage.getItem('petcard3');if(old){var od=JSON.parse(old);if(od.pets)S.pets=od.pets;S.pid=od.pid;}}catch(e){}
   }
-  if(!S.pets||!S.pets.length){
+  // Si viene con ?activar= no cargar demo Mochi
+  var hasActivar=new URLSearchParams(location.search).get('activar');
+  if(!hasActivar&&(!S.pets||!S.pets.length)){
     S.pets=[{id:uid(),emoji:'🐶',photo:null,name:'Mochi',raza:'Golden Retriever',edad:'3 años',sexo:'Macho',
       peso:'28 kg',sangre:'DEA 1.1+',vet:'Dr. Pérez',alergia:'Ninguna',
       tel:'+54 221 555-1234',dir:'Calle 50 N°123, La Plata',cast:'si',
@@ -1016,7 +1018,7 @@ function checkActivar(){
   if(!activar)return;
   try{
     var raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
-    if(!raw.dijeCode){console.log('No dijeCode in payload');return;}
+    if(!raw.dijeCode){console.log('No dijeCode');return;}
     // Verificar si ya existe una mascota con este código de dije
     var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
     if(existe){
@@ -1024,7 +1026,10 @@ function checkActivar(){
       window.history.replaceState({},'',location.pathname);
       return;
     }
-    // Crear mascota nueva con los datos del dije
+    // Si solo hay la mascota demo (Mochi sin dijeCode), limpiarla
+    var soloDemo=S.pets.length===1&&!S.pets[0].dijeCode&&S.pets[0].name==='Mochi';
+    if(soloDemo) S.pets=[];
+    // Crear mascota nueva
     var newPet={
       id:uid(),
       name:raw.name||'Mi mascota',
