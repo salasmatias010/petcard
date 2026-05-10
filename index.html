@@ -1032,12 +1032,7 @@ function checkActivar(){
       var conDije=S.pets.find(function(p){return p.dijeCode===raw.dijeCode;});
       if(conDije){S.pid=conDije.id;return;}
     }
-    // Si ya existe mascota con mismo nombre, actualizarle el dijeCode
-    if(raw.dijeCode){
-      var sinDije=S.pets.find(function(p){return p.name===raw.name&&!p.dijeCode;});
-      if(sinDije){sinDije.dijeCode=raw.dijeCode;S.pid=sinDije.id;save();return;}
-    }
-    // Crear mascota nueva
+    // Crear mascota nueva — nunca reutilizar una existente con otro dijeCode
     var p={id:uid(),name:raw.name||'Mi mascota',emoji:raw.emoji||'🐾',photo:raw.photo||null,
       raza:raw.raza||'',edad:raw.edad||'',sexo:raw.sexo||'Macho',cast:raw.cast||'no',
       peso:raw.peso||'',sangre:raw.sangre||'',alergia:raw.alergia||'Ninguna',
