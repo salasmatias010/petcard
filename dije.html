@@ -413,11 +413,21 @@ window.activateDije=async function(){
   if(!name||!tel){showToast('⚠️ Nombre y teléfono son obligatorios');return;}
   var btn=document.querySelector('#s-activate .btn-p');btn.textContent='Guardando...';btn.disabled=true;
   var ownerKey=Math.random().toString(36).slice(2)+Date.now().toString(36);
-  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[]};
+  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
   try{
     await setDoc(doc(db,'dijes',currentCode),{activated:true,ownerKey,pet,createdAt:new Date().toISOString()});
     localStorage.setItem('petcard_owner_'+currentCode,ownerKey);
-    currentPet=pet;isOwner=true;renderFicha();show('s-ficha');showToast('¡PetCard activada! 🐾');
+    // Pasar datos a mipetcard.com.ar con el código del dije
+    var payload={
+      name:pet.name, emoji:pet.emoji, photo:pet.photo,
+      raza:pet.raza, edad:pet.edad, sexo:pet.sexo, cast:pet.cast,
+      peso:pet.peso, sangre:pet.sangre, alergia:pet.alergia, vet:pet.vet,
+      tel:pet.tel, tel2:pet.tel2, dir:pet.dir,
+      dijeCode:currentCode  // código del dije — el QR siempre va a ser este
+    };
+    var b64=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    // Redirigir a mipetcard con los datos
+    window.location.href=location.origin+'/index.html?activar='+b64;
   }catch(e){showToast('Error al guardar');btn.textContent='🐾 Activar mi PetCard';btn.disabled=false;}
 };
 
