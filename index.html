@@ -133,6 +133,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <button onclick="requestNotifPerms()">Activar</button>
 </div>
 
+<div id="install-bar" style="display:none" class="notif-bar" style="background:#E6F1FB;border-color:rgba(24,95,165,.3)">
+  <span>📱</span><span style="color:#042C53">Instalá la app en tu celular</span>
+  <button id="install-btn" onclick="installApp()" style="background:#185FA5">Instalar</button>
+</div>
+
 <div class="pet-sel" id="pet-sel"></div>
 <div class="content" id="content"></div>
 
@@ -783,6 +788,32 @@ function setNav(nav){
   S.nav=nav;
   ['perfil','historial','recordatorios','qr'].forEach(function(n){document.getElementById('n-'+n).classList.toggle('act',n===nav);});
   renderMain();
+}
+
+/* ── INSTALAR APP ── */
+var _installPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _installPrompt=e;
+  // Solo mostrar si no está instalada
+  if(window.matchMedia('(display-mode: standalone)').matches)return;
+  var bar=document.getElementById('install-bar');
+  if(bar)bar.style.display='flex';
+});
+function installApp(){
+  if(_installPrompt){
+    _installPrompt.prompt();
+    _installPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted'){
+        document.getElementById('install-bar').style.display='none';
+        toast('✅ App instalada');
+      }
+      _installPrompt=null;
+    });
+  } else {
+    // iOS — mostrar instrucciones
+    toast('En Safari: tocá ⬆️ → Agregar a pantalla de inicio');
+  }
 }
 
 /* ── NOTIFICACIONES ── */
