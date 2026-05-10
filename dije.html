@@ -431,8 +431,9 @@ async function init(){
     if(!data.activated){show('s-activate');}
     else{
       currentPet=data.pet;
+      isOwner=false; // reset siempre
       const ok=localStorage.getItem('petcard_owner_'+currentCode);
-      if(ok===data.ownerKey)isOwner=true;
+      if(ok&&ok===data.ownerKey)isOwner=true;
       renderFicha();show('s-ficha');
       // Si NO es el dueño → notificar por WhatsApp con ubicación
       if(!isOwner&&data.pet&&data.pet.tel){
