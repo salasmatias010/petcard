@@ -1012,36 +1012,50 @@ function verFoto(vaxId){
 load();checkActivar();render();checkScan();checkNotifBar();scheduleNotifs();
 
 /* ── ACTIVAR DESDE DIJE ── */
+/* ── ACTIVAR DESDE DIJE ── */
 function checkActivar(){
   var params=new URLSearchParams(location.search);
   var activar=params.get('activar');
   if(!activar)return;
   try{
-    var raw;
+    // Decodificar base64 UTF-8
     var bytes=atob(activar);
     var arr=new Uint8Array(bytes.length);
     for(var i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
-    raw=JSON.parse(new TextDecoder('utf-8').decode(arr));
-    console.log('checkActivar raw:', JSON.stringify(raw));
-    if(!raw.dijeCode){console.log('No dijeCode');return;}
-    // Si ya existe una mascota con este dijeCode
-    var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
-    if(existe){S.pid=existe.id;window.history.replaceState({},'',location.pathname);return;}
-    // Si existe una mascota con el mismo nombre pero sin dijeCode, actualizarla
-    var sinDije=S.pets.find(function(p){return !p.dijeCode&&p.name===raw.name;});
-    if(sinDije){sinDije.dijeCode=raw.dijeCode;S.pid=sinDije.id;save();window.history.replaceState({},'',location.pathname);setTimeout(function(){toast('🐾 Dije vinculado a '+sinDije.name);},500);return;}
-    // Limpiar lista si está vacía o solo tiene demo
-    var soloDemo=S.pets.length===0||(S.pets.length===1&&!S.pets[0].dijeCode);
-    if(soloDemo)S.pets=[];
-    var newPet={id:uid(),name:raw.name||'Mi mascota',emoji:raw.emoji||'🐾',photo:raw.photo||null,raza:raw.raza||'',edad:raw.edad||'',sexo:raw.sexo||'Macho',cast:raw.cast||'no',peso:raw.peso||'',sangre:raw.sangre||'',alergia:raw.alergia||'Ninguna',vet:raw.vet||'',tel:raw.tel||'',tel2:raw.tel2||'',dir:raw.dir||'',dijeCode:raw.dijeCode,vaccines:[],history:[],reminders:[],pesos:[]};
-    console.log('Creating pet:', newPet.name, 'dijeCode:', newPet.dijeCode);
-    S.pets.push(newPet);
-    S.pid=newPet.id;
-    save();
-    console.log('Saved OK');
+    var raw=JSON.parse(new TextDecoder('utf-8').decode(arr));
+    console.log('Activar OK:', raw.name, 'dijeCode:', raw.dijeCode);
+    if(!raw.name){return;}
+    // Limpiar URL
     window.history.replaceState({},'',location.pathname);
-    setTimeout(function(){toast('🐾 Bienvenido '+newPet.name+'! Tu PetCard está lista');},500);
-  }catch(e){console.log('Activar error:',e.message);}
+    // Si ya existe mascota con este dijeCode, solo seleccionarla
+    if(raw.dijeCode){
+      var conDije=S.pets.find(function(p){return p.dijeCode===raw.dijeCode;});
+      if(conDije){S.pid=conDije.id;return;}
+    }
+    // Si ya existe mascota con mismo nombre, actualizarle el dijeCode
+    if(raw.dijeCode){
+      var sinDije=S.pets.find(function(p){return p.name===raw.name&&!p.dijeCode;});
+      if(sinDije){sinDije.dijeCode=raw.dijeCode;S.pid=sinDije.id;save();return;}
+    }
+    // Vaciar lista si está vacía o solo tiene demo sin dije
+    if(S.pets.length===0||(S.pets.length===1&&!S.pets[0].dijeCode)){
+      S.pets=[];
+    }
+    // Crear mascota nueva
+    var p={id:uid(),name:raw.name||'Mi mascota',emoji:raw.emoji||'🐾',photo:raw.photo||null,
+      raza:raw.raza||'',edad:raw.edad||'',sexo:raw.sexo||'Macho',cast:raw.cast||'no',
+      peso:raw.peso||'',sangre:raw.sangre||'',alergia:raw.alergia||'Ninguna',
+      vet:raw.vet||'',tel:raw.tel||'',tel2:raw.tel2||'',dir:raw.dir||'',
+      dijeCode:raw.dijeCode||null,
+      vaccines:[],history:[],reminders:[],pesos:[]};
+    S.pets.push(p);
+    S.pid=p.id;
+    save();
+    console.log('Mascota creada con dijeCode:', p.dijeCode);
+    setTimeout(function(){toast('🐾 Bienvenido '+p.name+'! Tu PetCard está lista');},600);
+  }catch(e){
+    console.log('Activar error:',e.message);
+  }
 }
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
