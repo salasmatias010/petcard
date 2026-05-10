@@ -1052,36 +1052,55 @@ function checkActivar(){
   var activar=params.get('activar');
   if(!activar)return;
   try{
-    // Decodificar base64 UTF-8
-    var bytes=atob(activar);
-    var arr=new Uint8Array(bytes.length);
-    for(var i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
-    var raw=JSON.parse(new TextDecoder('utf-8').decode(arr));
-    console.log('Activar OK:', raw.name, 'dijeCode:', raw.dijeCode);
-    if(!raw.name){return;}
-    // Limpiar URL
+    // Decode base64 UTF-8
+    var raw;
+    try{
+      raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
+    }catch(e1){
+      try{
+        var bin=atob(activar);
+        var bytes=new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+        raw=JSON.parse(new TextDecoder().decode(bytes));
+      }catch(e2){throw e2;}
+    }
+    if(!raw||!raw.name)return;
     window.history.replaceState({},'',location.pathname);
-    // Si ya existe mascota con este dijeCode, solo seleccionarla
+    // Si ya existe con este dijeCode, seleccionarla
     if(raw.dijeCode){
       var conDije=S.pets.find(function(p){return p.dijeCode===raw.dijeCode;});
       if(conDije){S.pid=conDije.id;return;}
     }
-    // Crear mascota nueva — nunca reutilizar una existente con otro dijeCode
-    var p={id:uid(),name:raw.name||'Mi mascota',emoji:raw.emoji||'🐾',photo:raw.photo||null,
-      raza:raw.raza||'',edad:raw.edad||'',sexo:raw.sexo||'Macho',cast:raw.cast||'no',
-      peso:raw.peso||'',sangre:raw.sangre||'',alergia:raw.alergia||'Ninguna',
-      vet:raw.vet||'',tel:raw.tel||'',email:raw.email||'',tel2:raw.tel2||'',dir:raw.dir||'',
+    // Crear mascota nueva
+    var p={
+      id:uid(),
+      name:raw.name,
+      emoji:raw.emoji||'🐾',
+      photo:raw.photo||null,
+      raza:raw.raza||'',
+      edad:raw.edad||'',
+      sexo:raw.sexo||'Macho',
+      cast:raw.cast||'no',
+      peso:raw.peso||'',
+      sangre:raw.sangre||'',
+      alergia:raw.alergia||'Ninguna',
+      vet:raw.vet||'',
+      tel:raw.tel||'',
+      email:raw.email||'',
+      tel2:raw.tel2||'',
+      dir:raw.dir||'',
       dijeCode:raw.dijeCode||null,
-      vaccines:[],history:[],reminders:[],pesos:[]};
+      vaccines:[],history:[],reminders:[],pesos:[]
+    };
     S.pets.push(p);
     S.pid=p.id;
     save();
-    console.log('Mascota creada con dijeCode:', p.dijeCode);
-    setTimeout(function(){toast('🐾 Bienvenido '+p.name+'! Tu PetCard está lista');},600);
+    setTimeout(function(){toast('🐾 Bienvenido '+p.name+'!');},500);
   }catch(e){
     console.log('Activar error:',e.message);
   }
 }
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('sw.js')
