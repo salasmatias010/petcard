@@ -111,6 +111,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
     <div class="card">
       <div class="ctitle">Contacto del dueño *</div>
       <div class="fg"><label>Teléfono *</label><input type="tel" id="act-tel" placeholder="+54 221 555-1234"></div>
+      <div class="fg"><label>Email (para alertas si se pierde)</label><input type="email" id="act-email" placeholder="tu@email.com"></div>
       <div class="fg"><label>Teléfono alternativo</label><input type="tel" id="act-tel2" placeholder="+54 221 555-5678"></div>
       <div class="fg"><label>Dirección</label><input id="act-dir" placeholder="Calle 50 N°123, La Plata"></div>
     </div>
@@ -421,13 +422,14 @@ window.activateDije=async function(){
     localStorage.setItem('petcard_owner_'+currentCode,ownerKey);
     // Pasar datos a mipetcard.com.ar con el código del dije
     var payload={
-      name:pet.name, emoji:pet.emoji, photo:pet.photo,
+      name:pet.name,
+      photo:pet.photo,
       raza:pet.raza, edad:pet.edad, sexo:pet.sexo, cast:pet.cast,
       peso:pet.peso, sangre:pet.sangre, alergia:pet.alergia, vet:pet.vet,
       tel:pet.tel, tel2:pet.tel2, dir:pet.dir,
       dijeCode:currentCode
     };
-    // Codificar payload de forma segura (sin emojis en base64)
+    // Codificar sin emoji para evitar problemas con btoa
     var bytes=new TextEncoder().encode(JSON.stringify(payload));
     var bin='';
     bytes.forEach(function(b){bin+=String.fromCharCode(b);});
