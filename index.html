@@ -487,18 +487,29 @@ function rQRPage(p){
 /* ── QR ── */
 function genQR(p){
   var el=document.getElementById('qr-out');if(!el)return;
-  var pay={n:p.name,e:p.emoji,r:p.raza,a:p.edad,s:p.sexo,p:p.peso,b:p.sangre,v:p.vet,al:p.alergia,t:p.tel,d:p.dir,c:p.cast,
-    vx:(p.vaccines||[]).map(function(x){return{n:x.n,d:x.d,s:x.s};}),
-    hi:(p.history||[]).map(function(x){return{t:x.t,d:x.d,o:x.o};}),
-    rm:(p.reminders||[]).map(function(x){return{t:x.t,d:x.d,o:x.o};})};
-  // Note: photo NOT included in QR to keep URL short
-  var b64=btoa(unescape(encodeURIComponent(JSON.stringify(pay))));
-  var url=location.href.split('?')[0]+'?pet='+b64;
-  if(url.length>2000){var mini={n:p.name,e:p.emoji,r:p.raza,a:p.edad,s:p.sexo,p:p.peso,b:p.sangre,v:p.vet,al:p.alergia,t:p.tel,d:p.dir,c:p.cast};url=location.href.split('?')[0]+'?pet='+btoa(unescape(encodeURIComponent(JSON.stringify(mini))));}
+  var url;
+  if(p.dijeCode){
+    // Usar siempre el QR del dije — nunca cambia
+    url=location.origin+'/dije.html?code='+p.dijeCode;
+  } else {
+    // QR generado con datos locales (mascotas sin dije)
+    var pay={n:p.name,e:p.emoji,r:p.raza,a:p.edad,s:p.sexo,p:p.peso,b:p.sangre,v:p.vet,al:p.alergia,t:p.tel,d:p.dir,c:p.cast,
+      vx:(p.vaccines||[]).map(function(x){return{n:x.n,d:x.d,s:x.s};}),
+      hi:(p.history||[]).map(function(x){return{t:x.t,d:x.d,o:x.o};}),
+      rm:(p.reminders||[]).map(function(x){return{t:x.t,d:x.d,o:x.o};})};
+    var b64=btoa(unescape(encodeURIComponent(JSON.stringify(pay))));
+    url=location.href.split('?')[0]+'?pet='+b64;
+    if(url.length>2000){var mini={n:p.name,e:p.emoji,r:p.raza,a:p.edad,s:p.sexo,p:p.peso,b:p.sangre,v:p.vet,al:p.alergia,t:p.tel,d:p.dir,c:p.cast};url=location.href.split('?')[0]+'?pet='+btoa(unescape(encodeURIComponent(JSON.stringify(mini))));}
+  }
   window._qrUrl=url;
-  try{var svg=QR.svg(url);if(!svg){el.innerHTML='<div class="qr-hint" style="color:var(--red-tx)">URL demasiado larga para el QR.</div>';return;}
-    el.innerHTML='<div style="border-radius:12px;overflow:hidden;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.08)">'+svg+'</div>';}
-  catch(e){el.innerHTML='<div class="qr-hint" style="color:var(--red-tx)">Error generando QR: '+e+'</div>';}
+  // Usar api.qrserver.com para QR confiable
+  var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(url);
+  el.innerHTML='<div style="border-radius:12px;overflow:hidden;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.08)">'
+    +'<img src="'+qrSrc+'" style="width:160px;height:160px;display:block">'
+    +'</div>';
+  if(p.dijeCode){
+    el.innerHTML+='<div style="margin-top:8px;font-size:11px;color:var(--tx3);text-align:center">🔗 QR fijo del dije '+p.dijeCode+'</div>';
+  }
 }
 function copyLink(){
   if(!window._qrUrl)return;
@@ -953,7 +964,50 @@ function verFoto(vaxId){
 }
 
 /* ── INIT ── */
-load();render();checkScan();checkNotifBar();scheduleNotifs();
+load();render();checkScan();checkNotifBar();scheduleNotifs();checkActivar();
+
+/* ── ACTIVAR DESDE DIJE ── */
+function checkActivar(){
+  var params=new URLSearchParams(location.search);
+  var activar=params.get('activar');
+  if(!activar)return;
+  try{
+    var raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
+    // Crear mascota con los datos del dije
+    var newPet={
+      id:uid(),
+      name:raw.name||'Mi mascota',
+      emoji:raw.emoji||'🐾',
+      photo:raw.photo||null,
+      raza:raw.raza||'',
+      edad:raw.edad||'',
+      sexo:raw.sexo||'Macho',
+      cast:raw.cast||'no',
+      peso:raw.peso||'',
+      sangre:raw.sangre||'',
+      alergia:raw.alergia||'Ninguna',
+      vet:raw.vet||'',
+      tel:raw.tel||'',
+      tel2:raw.tel2||'',
+      dir:raw.dir||'',
+      dijeCode:raw.dijeCode||null,  // código del dije — QR fijo
+      vaccines:[],history:[],reminders:[],pesos:[]
+    };
+    // Verificar si ya existe una mascota con este código de dije
+    var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
+    if(!existe){
+      S.pets.push(newPet);
+      S.pid=newPet.id;
+      save();
+    } else {
+      S.pid=existe.id;
+    }
+    // Limpiar URL sin recargar
+    window.history.replaceState({},'',location.pathname);
+    render();
+    toast('🐾 ¡Bienvenido '+newPet.name+'! Tu PetCard está lista');
+  }catch(e){console.log('Activar error',e);}
+}
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('sw.js')
