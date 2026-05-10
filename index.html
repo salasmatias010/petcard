@@ -1018,43 +1018,21 @@ function checkActivar(){
   if(!activar)return;
   try{
     var raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
+    console.log('checkActivar raw:', JSON.stringify(raw));
     if(!raw.dijeCode){console.log('No dijeCode');return;}
-    // Verificar si ya existe una mascota con este código de dije
     var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
-    if(existe){
-      S.pid=existe.id;
-      window.history.replaceState({},'',location.pathname);
-      return;
-    }
-    // Si solo hay la mascota demo (Mochi sin dijeCode), limpiarla
-    var soloDemo=S.pets.length===1&&!S.pets[0].dijeCode&&S.pets[0].name==='Mochi';
-    if(soloDemo) S.pets=[];
-    // Crear mascota nueva
-    var newPet={
-      id:uid(),
-      name:raw.name||'Mi mascota',
-      emoji:raw.emoji||'🐾',
-      photo:raw.photo||null,
-      raza:raw.raza||'',
-      edad:raw.edad||'',
-      sexo:raw.sexo||'Macho',
-      cast:raw.cast||'no',
-      peso:raw.peso||'',
-      sangre:raw.sangre||'',
-      alergia:raw.alergia||'Ninguna',
-      vet:raw.vet||'',
-      tel:raw.tel||'',
-      tel2:raw.tel2||'',
-      dir:raw.dir||'',
-      dijeCode:raw.dijeCode,
-      vaccines:[],history:[],reminders:[],pesos:[]
-    };
+    if(existe){S.pid=existe.id;window.history.replaceState({},'',location.pathname);return;}
+    var soloDemo=S.pets.length===0||(S.pets.length===1&&!S.pets[0].dijeCode);
+    if(soloDemo)S.pets=[];
+    var newPet={id:uid(),name:raw.name||'Mi mascota',emoji:raw.emoji||'🐾',photo:raw.photo||null,raza:raw.raza||'',edad:raw.edad||'',sexo:raw.sexo||'Macho',cast:raw.cast||'no',peso:raw.peso||'',sangre:raw.sangre||'',alergia:raw.alergia||'Ninguna',vet:raw.vet||'',tel:raw.tel||'',tel2:raw.tel2||'',dir:raw.dir||'',dijeCode:raw.dijeCode,vaccines:[],history:[],reminders:[],pesos:[]};
+    console.log('Creating pet:', newPet.name, 'dijeCode:', newPet.dijeCode);
     S.pets.push(newPet);
     S.pid=newPet.id;
     save();
+    console.log('Saved OK');
     window.history.replaceState({},'',location.pathname);
-    setTimeout(function(){toast('🐾 ¡Bienvenido '+newPet.name+'! Tu PetCard está lista');},500);
-  }catch(e){console.log('Activar error',e);}
+    setTimeout(function(){toast('🐾 Bienvenido '+newPet.name+'! Tu PetCard está lista');},500);
+  }catch(e){console.log('Activar error:',e.message);}
 }
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
