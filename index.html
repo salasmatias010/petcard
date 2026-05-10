@@ -470,18 +470,61 @@ function rRem(p){
     +'<button class="addbtn" onclick="openModal(\'m-rem\')">＋ Agregar recordatorio</button></div>';
 }
 function rQRPage(p){
-  return'<div class="card"><div class="ctitle">QR único · '+p.name+'</div>'
-    +'<div class="qr-wrap"><div id="qr-out"></div>'
-    +'<div class="qr-info"><strong>'+p.name+'</strong><br>'+p.raza+' · '+p.edad+'<br>📞 '+p.tel+'</div>'
-    +'<div class="qr-hint">Escaneá con la cámara para abrir la ficha de '+p.name+'.</div>'
-    +'<div class="qr-acts"><button class="btn-p" onclick="copyLink()">Copiar enlace</button></div>'
-    +'</div></div>'
-    +'<div class="card"><div class="ctitle">🏷 Etiqueta para collar</div>'
-    +'<p style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6">Imprimí, recortá y laminá para el collar. Incluye el QR y datos de contacto.</p>'
-    +'<div style="display:flex;gap:8px">'
-    +'<button class="btn-s" style="flex:1" onclick="printCollar(\'mini\')">🏷 Solo QR</button>'
-    +'<button class="btn-p" style="flex:1" onclick="printCollar(\'full\')">🖨 QR + datos</button>'
-    +'</div></div>';
+  if(!p.dijeCode){
+    return'<div class="card"><div class="ctitle">QR del collar</div>'
+      +'<div style="text-align:center;padding:24px;color:var(--tx3);font-size:14px;line-height:1.6">'
+      +'Esta mascota no tiene un dije PetCard vinculado.<br><br>'
+      +'<span style="font-size:13px">Comprá un dije en <strong style="color:var(--teal)">mipetcard.com.ar</strong> para obtener tu QR.</span>'
+      +'</div></div>';
+  }
+  return'<div class="card"><div class="ctitle">QR del collar · '+p.name+'</div>'
+    +'<div class="qr-wrap">'
+    +'<div id="qr-out"></div>'
+    +'<div class="qr-hint" style="margin-top:8px">Este es el QR de tu dije. Escanealo para ver la ficha de '+p.name+'.</div>'
+    +'<div class="qr-acts" style="margin-top:14px">'
+    +'<button class="btn-p" onclick="printDijeQR()">🖨 Imprimir QR</button>'
+    +'</div></div></div>';
+}
+
+/* ── QR ── */
+function genQR(p){
+  var el=document.getElementById('qr-out');if(!el)return;
+  if(!p.dijeCode)return;
+  var url=location.origin+'/dije.html?code='+p.dijeCode;
+  window._qrUrl=url;
+  window._qrPetName=p.name;
+  window._qrPetEmoji=p.emoji;
+  window._qrPetTel=p.tel;
+  var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='+encodeURIComponent(url);
+  el.innerHTML='<div style="border-radius:12px;overflow:hidden;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.08)">'
+    +'<img src="'+qrSrc+'" style="width:180px;height:180px;display:block" id="qr-img">'
+    +'</div>'
+    +'<div style="margin-top:8px;font-size:11px;color:var(--tx3);text-align:center">Dije '+p.dijeCode+'</div>';
+}
+
+function printDijeQR(){
+  var p=apet();if(!p||!p.dijeCode)return;
+  var url=location.origin+'/dije.html?code='+p.dijeCode;
+  var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='+encodeURIComponent(url);
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>QR '+p.name+'</title>'
+    +'<style>@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}'
+    +'.tag{border:2px solid #1a1814;border-radius:16px;padding:10mm;display:flex;flex-direction:column;align-items:center;gap:4mm}'
+    +'.tag img{width:50mm;height:50mm}'
+    +'.name{font-size:16pt;font-weight:700;color:#1a1814}'
+    +'.tel{font-size:12pt;color:#444}'
+    +'.code{font-size:8pt;color:#999;margin-top:2mm}'
+    +'</style></head><body>'
+    +'<div class="tag">'
+    +'<img src="'+qrSrc+'">'
+    +'<div class="name">'+p.emoji+' '+p.name+'</div>'
+    +'<div class="tel">📞 '+p.tel+'</div>'
+    +'<div class="code">'+p.dijeCode+'</div>'
+    +'</div>'
+    +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},1500);}<\/script>'
+    +'</body></html>');
+  w.document.close();
 }
 
 /* ── QR ── */
