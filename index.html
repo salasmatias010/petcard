@@ -1007,7 +1007,7 @@ function verFoto(vaxId){
 }
 
 /* ── INIT ── */
-load();render();checkScan();checkNotifBar();scheduleNotifs();checkActivar();
+load();checkActivar();render();checkScan();checkNotifBar();scheduleNotifs();
 
 /* ── ACTIVAR DESDE DIJE ── */
 function checkActivar(){
@@ -1016,7 +1016,15 @@ function checkActivar(){
   if(!activar)return;
   try{
     var raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
-    // Crear mascota con los datos del dije
+    if(!raw.dijeCode){console.log('No dijeCode in payload');return;}
+    // Verificar si ya existe una mascota con este código de dije
+    var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
+    if(existe){
+      S.pid=existe.id;
+      window.history.replaceState({},'',location.pathname);
+      return;
+    }
+    // Crear mascota nueva con los datos del dije
     var newPet={
       id:uid(),
       name:raw.name||'Mi mascota',
@@ -1033,22 +1041,14 @@ function checkActivar(){
       tel:raw.tel||'',
       tel2:raw.tel2||'',
       dir:raw.dir||'',
-      dijeCode:raw.dijeCode||null,  // código del dije — QR fijo
+      dijeCode:raw.dijeCode,
       vaccines:[],history:[],reminders:[],pesos:[]
     };
-    // Verificar si ya existe una mascota con este código de dije
-    var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
-    if(!existe){
-      S.pets.push(newPet);
-      S.pid=newPet.id;
-      save();
-    } else {
-      S.pid=existe.id;
-    }
-    // Limpiar URL sin recargar
+    S.pets.push(newPet);
+    S.pid=newPet.id;
+    save();
     window.history.replaceState({},'',location.pathname);
-    render();
-    toast('🐾 ¡Bienvenido '+newPet.name+'! Tu PetCard está lista');
+    setTimeout(function(){toast('🐾 ¡Bienvenido '+newPet.name+'! Tu PetCard está lista');},500);
   }catch(e){console.log('Activar error',e);}
 }
 if('serviceWorker' in navigator){
