@@ -1017,7 +1017,11 @@ function checkActivar(){
   var activar=params.get('activar');
   if(!activar)return;
   try{
-    var raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
+    var raw;
+    var bytes=atob(activar);
+    var arr=new Uint8Array(bytes.length);
+    for(var i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
+    raw=JSON.parse(new TextDecoder('utf-8').decode(arr));
     console.log('checkActivar raw:', JSON.stringify(raw));
     if(!raw.dijeCode){console.log('No dijeCode');return;}
     var existe=S.pets.find(function(p){return p.dijeCode&&p.dijeCode===raw.dijeCode;});
