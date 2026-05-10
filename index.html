@@ -1052,17 +1052,19 @@ function checkActivar(){
   var activar=params.get('activar');
   if(!activar)return;
   try{
-    // Decode base64 UTF-8
+    // Decode - try URL encoded first, then base64
     var raw;
     try{
-      raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
+      raw=JSON.parse(decodeURIComponent(activar));
     }catch(e1){
       try{
+        raw=JSON.parse(decodeURIComponent(escape(atob(activar))));
+      }catch(e2){
         var bin=atob(activar);
         var bytes=new Uint8Array(bin.length);
         for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
         raw=JSON.parse(new TextDecoder().decode(bytes));
-      }catch(e2){throw e2;}
+      }
     }
     if(!raw||!raw.name)return;
     window.history.replaceState({},'',location.pathname);
