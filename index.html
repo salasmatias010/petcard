@@ -125,6 +125,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <div class="topbtns">
     <div class="ibtn" title="Notificaciones" onclick="requestNotifPerms()">🔔</div>
     <div class="ibtn" title="Exportar / Importar" onclick="openModal('m-data')">💾</div>
+    <div id="save-icon" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--tx3)">☁️</div>
   </div>
 </div>
 
@@ -365,26 +366,92 @@ return s+'</svg>';}};
 var S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
 function uid(){return Math.random().toString(36).slice(2,10);}
 function apet(){return S.pets.find(function(p){return p.id===S.pid;});}
-function save(){try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){alert('Error al guardar: almacenamiento lleno. Exportá un respaldo.');}}
+/* ── FIREBASE ── */
+var _db=null, _uid=null, _saving=false;
+
+function fbInit(callback){
+  if(_db){callback();return;}
+  var s1=document.createElement('script');
+  s1.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+  s1.onload=function(){
+    var s2=document.createElement('script');
+    s2.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js';
+    s2.onload=function(){
+      var s3=document.createElement('script');
+      s3.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js';
+      s3.onload=function(){
+        if(!firebase.apps.length){
+          firebase.initializeApp({
+            apiKey:"AIzaSyC_sERFBVgb9PMsGMtGiltcgycxoGqVZLg",
+            authDomain:"mipetcard.firebaseapp.com",
+            projectId:"mipetcard",
+            storageBucket:"mipetcard.firebasestorage.app",
+            messagingSenderId:"720369332644",
+            appId:"1:720369332644:web:f71bd826ab4d3412211131"
+          });
+        }
+        _db=firebase.firestore();
+        firebase.auth().onAuthStateChanged(function(user){
+          if(user){_uid=user.uid;callback();}
+          else{firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});}
+        });
+      };
+      document.head.appendChild(s3);
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s1);
+}
+
+function save(){
+  // Save to localStorage as backup
+  try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+  // Save to Firebase
+  if(_db&&_uid){
+    _saving=true;
+    var icon=document.getElementById('save-icon');
+    if(icon)icon.textContent='⏳';
+    _db.collection('usuarios').doc(_uid).set({
+      pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
+    }).then(function(){
+      _saving=false;
+      if(icon)icon.textContent='💾';
+    }).catch(function(e){
+      console.log('Save error',e);
+      if(icon)icon.textContent='💾';
+    });
+  }
+}
+
 function load(){
+  // Load from localStorage first (fast)
   try{var d=localStorage.getItem('petcard4');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
-  // migrate from older version
-  if(!S.pets||!S.pets.length){
-    try{var old=localStorage.getItem('petcard3');if(old){var od=JSON.parse(old);if(od.pets)S.pets=od.pets;S.pid=od.pid;}}catch(e){}
-  }
-  // Si viene con ?activar= no cargar demo Mochi
-  var hasActivar=new URLSearchParams(location.search).get('activar');
-  if(!hasActivar&&(!S.pets||!S.pets.length)){
-    S.pets=[{id:uid(),emoji:'🐶',photo:null,name:'Mochi',raza:'Golden Retriever',edad:'3 años',sexo:'Macho',
-      peso:'28 kg',sangre:'DEA 1.1+',vet:'Dr. Pérez',alergia:'Ninguna',
-      tel:'+54 221 555-1234',dir:'Calle 50 N°123, La Plata',cast:'si',
-      vaccines:[{id:uid(),n:'Sextuple',d:'2025-03-15',s:'ok'},{id:uid(),n:'Rabia',d:'2025-01-10',s:'warn'},{id:uid(),n:'Antiparasitaria',d:'2025-04-01',s:'ok'}],
-      history:[{id:uid(),t:'Consulta de control',d:'2025-03-15',o:'Dr. Pérez · Todo normal'},{id:uid(),t:'Antiparasitaria interna',d:'2025-04-01',o:'Nexgard Spectra'}],
-      reminders:[{id:uid(),t:'Refuerzo Rabia',d:'2025-07-10',o:'Turno con Dr. Pérez'},{id:uid(),t:'Control anual',d:'2026-03-15',o:''}]
-    }];
-    S.pid=S.pets[0].id;save();
-  }
-  if(!S.pid&&S.pets.length)S.pid=S.pets[0].id;
+  if(!S.pid&&S.pets&&S.pets.length)S.pid=S.pets[0].id;
+}
+
+function loadFromFirebase(){
+  if(!_db||!_uid)return;
+  _db.collection('usuarios').doc(_uid).get().then(function(doc){
+    if(doc.exists){
+      var data=doc.data();
+      if(data.pets&&data.pets.length){
+        S.pets=data.pets;
+        S.pid=data.pid||data.pets[0].id;
+        // Sync to localStorage
+        try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+        checkActivar();
+        render();
+      }
+    } else {
+      // New user — no data yet
+      checkActivar();
+      render();
+    }
+  }).catch(function(e){
+    console.log('Load error',e);
+    checkActivar();
+    render();
+  });
 }
 
 /* ── RENDER ── */
@@ -1040,7 +1107,12 @@ function verFoto(vaxId){
 }
 
 /* ── INIT ── */
-load();checkActivar();render();checkScan();checkNotifBar();scheduleNotifs();
+// Init con Firebase
+load(); // Load from localStorage first
+fbInit(function(){
+  loadFromFirebase(); // Then sync from Firebase
+  checkScan();checkNotifBar();scheduleNotifs();
+});
 
 /* ── ACTIVAR DESDE DIJE ── */
 function checkActivar(){
