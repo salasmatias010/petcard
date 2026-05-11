@@ -412,45 +412,77 @@ function updateAuthBar(){
   if(_anon){
     bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:12px 20px;background:#E6F1FB;border-bottom:1px solid rgba(24,95,165,.2)">'
       +'<span style="font-size:20px">☁️</span>'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#042C53">Vinculá tu cuenta de Google</div>'
-      +'<div style="font-size:11px;color:#185FA5">Para no perder tus datos si borrás el navegador</div></div>'
-      +'<button onclick="loginGoogle()" style="padding:7px 14px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Vincular</button>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#042C53">Guardá tus datos en la nube</div>'
+      +'<div style="font-size:11px;color:#185FA5">Para no perderlos si borrás el navegador</div></div>'
+      +'<button onclick="showAuthModal()" style="padding:7px 14px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Guardar</button>'
       +'</div>';
   } else {
     bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 20px;background:#E1F5EE;border-bottom:1px solid rgba(29,158,117,.2)">'
       +'<span style="font-size:18px">✅</span>'
-      +'<div style="font-size:13px;color:#085041">Cuenta vinculada con Google — tus datos están seguros</div>'
+      +'<div style="font-size:13px;color:#085041">Datos guardados en la nube — <strong>'+(_userEmail||'cuenta vinculada')+'</strong></div>'
       +'</div>';
-    setTimeout(function(){bar.innerHTML='';},4000);
+    setTimeout(function(){var bar=document.getElementById('auth-bar');if(bar)bar.innerHTML='';},5000);
   }
 }
 
-function loginGoogle(){
-  var provider=new firebase.auth.GoogleAuthProvider();
+var _userEmail='';
+
+function showAuthModal(){
+  var m=document.getElementById('m-auth');
+  if(m){m.style.display='flex';return;}
+  var modal=document.createElement('div');
+  modal.id='m-auth';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML='<div style="background:#fff;border-radius:14px;padding:24px;max-width:340px;width:100%">'
+    +'<h3 style="font-size:17px;font-weight:600;margin-bottom:6px">Guardá tus datos ☁️</h3>'
+    +'<p style="font-size:13px;color:#6b6760;margin-bottom:16px;line-height:1.5">Creá una cuenta con tu email para no perder tus datos si cambiás de celular o borrás el navegador.</p>'
+    +'<div style="margin-bottom:10px"><input id="auth-email" type="email" placeholder="tu@email.com" style="width:100%;padding:10px 12px;background:#f0ede8;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-size:14px;font-family:inherit;outline:none"></div>'
+    +'<div style="margin-bottom:16px"><input id="auth-pass" type="password" placeholder="Contraseña (mín. 6 caracteres)" style="width:100%;padding:10px 12px;background:#f0ede8;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-size:14px;font-family:inherit;outline:none"></div>'
+    +'<button onclick="doRegister()" style="width:100%;padding:12px;background:#1D9E75;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px">Crear cuenta</button>'
+    +'<button onclick="doLogin()" style="width:100%;padding:12px;background:#f0ede8;color:#1a1814;border:1px solid rgba(0,0,0,.18);border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:12px">Ya tengo cuenta — Iniciar sesión</button>'
+    +'<button onclick="document.getElementById('m-auth').style.display='none'" style="width:100%;padding:10px;background:none;border:none;font-size:13px;color:#9e9b97;cursor:pointer;font-family:inherit">Cancelar</button>'
+    +'</div>';
+  document.body.appendChild(modal);
+}
+
+function doRegister(){
+  var email=document.getElementById('auth-email').value.trim();
+  var pass=document.getElementById('auth-pass').value;
+  if(!email||!pass){toast('⚠️ Completá email y contraseña');return;}
+  if(pass.length<6){toast('⚠️ La contraseña debe tener al menos 6 caracteres');return;}
   var currentUser=firebase.auth().currentUser;
-  // Guardar datos actuales antes del redirect
-  try{localStorage.setItem('petcard_pre_auth',JSON.stringify(S));}catch(e){}
-  if(currentUser&&currentUser.isAnonymous){
-    currentUser.linkWithRedirect(provider);
-  } else {
-    firebase.auth().signInWithRedirect(provider);
-  }
+  var credential=firebase.auth.EmailAuthProvider.credential(email,pass);
+  currentUser.linkWithCredential(credential).then(function(result){
+    _uid=result.user.uid;_anon=false;_userEmail=email;
+    save();
+    document.getElementById('m-auth').style.display='none';
+    updateAuthBar();
+    toast('✅ Cuenta creada — datos guardados en la nube');
+  }).catch(function(e){
+    if(e.code==='auth/email-already-in-use'){
+      // Email ya existe — hacer login
+      doLogin();
+    } else {
+      toast('Error: '+e.message);
+    }
+  });
 }
 
-// Manejar resultado del redirect al volver
-function handleRedirectResult(){
-  firebase.auth().getRedirectResult().then(function(result){
-    if(!result||!result.user)return;
-    _uid=result.user.uid;
-    _anon=result.user.isAnonymous;
-    // Restaurar datos pre-auth si existen
-    try{
-      var pre=localStorage.getItem('petcard_pre_auth');
-      if(pre){
-        var preData=JSON.parse(pre);
-        if(preData.pets&&preData.pets.length){
-          S=preData;save();
-        }
+function doLogin(){
+  var email=document.getElementById('auth-email').value.trim();
+  var pass=document.getElementById('auth-pass').value;
+  if(!email||!pass){toast('⚠️ Completá email y contraseña');return;}
+  firebase.auth().signInWithEmailAndPassword(email,pass).then(function(result){
+    _uid=result.user.uid;_anon=false;_userEmail=email;
+    document.getElementById('m-auth').style.display='none';
+    loadFromFirebase();
+    updateAuthBar();
+    toast('✅ Sesión iniciada — datos recuperados');
+  }).catch(function(e){
+    toast('Error: '+e.message);
+  });
+}
+
         localStorage.removeItem('petcard_pre_auth');
       }
     }catch(e){}
