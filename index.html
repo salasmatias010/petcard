@@ -428,40 +428,48 @@ function updateAuthBar(){
 function loginGoogle(){
   var provider=new firebase.auth.GoogleAuthProvider();
   var currentUser=firebase.auth().currentUser;
+  // Guardar datos actuales antes del redirect
+  try{localStorage.setItem('petcard_pre_auth',JSON.stringify(S));}catch(e){}
   if(currentUser&&currentUser.isAnonymous){
-    // Vincular cuenta anónima con Google
-    currentUser.linkWithPopup(provider).then(function(result){
-      _uid=result.user.uid;_anon=false;
-      save();updateAuthBar();
-      toast('✅ Cuenta vinculada con Google');
-    }).catch(function(e){
-      if(e.code==='auth/credential-already-in-use'){
-        // Ya tiene cuenta Google — hacer merge de datos
-        var anonData=JSON.parse(JSON.stringify(S));
-        firebase.auth().signInWithCredential(e.credential).then(function(result){
-          _uid=result.user.uid;_anon=false;
-          // Cargar datos existentes y mergear
-          _db.collection('usuarios').doc(_uid).get().then(function(doc){
-            if(doc.exists&&doc.data().pets&&doc.data().pets.length){
-              // Usar datos de Firebase (más completos)
-              S.pets=doc.data().pets;S.pid=doc.data().pid||S.pets[0].id;
-            } else {
-              // Subir datos anónimos a nueva cuenta
-              S=anonData;save();
-            }
-            updateAuthBar();render();toast('✅ Sesión recuperada');
-          });
-        });
-      } else {
-        console.log('Link error',e);toast('Error al vincular: '+e.message);
-      }
-    });
+    currentUser.linkWithRedirect(provider);
   } else {
-    firebase.auth().signInWithPopup(provider).then(function(result){
-      _uid=result.user.uid;_anon=false;updateAuthBar();
-      loadFromFirebase();toast('✅ Sesión iniciada');
-    }).catch(function(e){console.log('Login error',e);});
+    firebase.auth().signInWithRedirect(provider);
   }
+}
+
+// Manejar resultado del redirect al volver
+function handleRedirectResult(){
+  firebase.auth().getRedirectResult().then(function(result){
+    if(!result||!result.user)return;
+    _uid=result.user.uid;
+    _anon=result.user.isAnonymous;
+    // Restaurar datos pre-auth si existen
+    try{
+      var pre=localStorage.getItem('petcard_pre_auth');
+      if(pre){
+        var preData=JSON.parse(pre);
+        if(preData.pets&&preData.pets.length){
+          S=preData;save();
+        }
+        localStorage.removeItem('petcard_pre_auth');
+      }
+    }catch(e){}
+    updateAuthBar();
+    render();
+    toast('✅ Cuenta vinculada con Google');
+  }).catch(function(e){
+    if(e.code==='auth/credential-already-in-use'){
+      // Cuenta Google ya existe — iniciar sesión con ella
+      firebase.auth().signInWithCredential(e.credential).then(function(result){
+        _uid=result.user.uid;_anon=false;
+        loadFromFirebase();
+        updateAuthBar();
+        toast('✅ Sesión recuperada');
+      });
+    } else {
+      console.log('Redirect error',e);
+    }
+  });
 }
 
 function save(){
