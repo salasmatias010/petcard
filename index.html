@@ -483,27 +483,6 @@ function doLogin(){
   });
 }
 
-        localStorage.removeItem('petcard_pre_auth');
-      }
-    }catch(e){}
-    updateAuthBar();
-    render();
-    toast('✅ Cuenta vinculada con Google');
-  }).catch(function(e){
-    if(e.code==='auth/credential-already-in-use'){
-      // Cuenta Google ya existe — iniciar sesión con ella
-      firebase.auth().signInWithCredential(e.credential).then(function(result){
-        _uid=result.user.uid;_anon=false;
-        loadFromFirebase();
-        updateAuthBar();
-        toast('✅ Sesión recuperada');
-      });
-    } else {
-      console.log('Redirect error',e);
-    }
-  });
-}
-
 function save(){
   // Save to localStorage as backup
   try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
