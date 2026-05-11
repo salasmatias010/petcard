@@ -129,6 +129,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   </div>
 </div>
 
+<div id="auth-bar"></div>
 <div id="notif-bar" style="display:none" class="notif-bar">
   <span>🔔</span><span id="notif-msg">Activá notificaciones para recordatorios</span>
   <button onclick="requestNotifPerms()">Activar</button>
@@ -367,40 +368,100 @@ var S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
 function uid(){return Math.random().toString(36).slice(2,10);}
 function apet(){return S.pets.find(function(p){return p.id===S.pid;});}
 /* ── FIREBASE ── */
-var _db=null, _uid=null, _saving=false;
+var _db=null, _uid=null, _saving=false, _anon=true;
 
 function fbInit(callback){
   if(_db){callback();return;}
-  var s1=document.createElement('script');
-  s1.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
-  s1.onload=function(){
-    var s2=document.createElement('script');
-    s2.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js';
-    s2.onload=function(){
-      var s3=document.createElement('script');
-      s3.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js';
-      s3.onload=function(){
-        if(!firebase.apps.length){
-          firebase.initializeApp({
-            apiKey:"AIzaSyC_sERFBVgb9PMsGMtGiltcgycxoGqVZLg",
-            authDomain:"mipetcard.firebaseapp.com",
-            projectId:"mipetcard",
-            storageBucket:"mipetcard.firebasestorage.app",
-            messagingSenderId:"720369332644",
-            appId:"1:720369332644:web:f71bd826ab4d3412211131"
+  var scripts=['https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js'];
+  var idx=0;
+  function loadNext(){
+    if(idx>=scripts.length){initFB();return;}
+    var s=document.createElement('script');s.src=scripts[idx++];s.onload=loadNext;document.head.appendChild(s);
+  }
+  function initFB(){
+    if(!firebase.apps.length){
+      firebase.initializeApp({
+        apiKey:"AIzaSyC_sERFBVgb9PMsGMtGiltcgycxoGqVZLg",
+        authDomain:"mipetcard.firebaseapp.com",
+        projectId:"mipetcard",
+        storageBucket:"mipetcard.firebasestorage.app",
+        messagingSenderId:"720369332644",
+        appId:"1:720369332644:web:f71bd826ab4d3412211131"
+      });
+    }
+    _db=firebase.firestore();
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user){
+        _uid=user.uid;
+        _anon=user.isAnonymous;
+        updateAuthBar();
+        callback();
+      } else {
+        firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});
+      }
+    });
+  }
+  loadNext();
+}
+
+function updateAuthBar(){
+  var bar=document.getElementById('auth-bar');
+  if(!bar)return;
+  if(_anon){
+    bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:12px 20px;background:#E6F1FB;border-bottom:1px solid rgba(24,95,165,.2)">'
+      +'<span style="font-size:20px">☁️</span>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#042C53">Vinculá tu cuenta de Google</div>'
+      +'<div style="font-size:11px;color:#185FA5">Para no perder tus datos si borrás el navegador</div></div>'
+      +'<button onclick="loginGoogle()" style="padding:7px 14px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Vincular</button>'
+      +'</div>';
+  } else {
+    bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 20px;background:#E1F5EE;border-bottom:1px solid rgba(29,158,117,.2)">'
+      +'<span style="font-size:18px">✅</span>'
+      +'<div style="font-size:13px;color:#085041">Cuenta vinculada con Google — tus datos están seguros</div>'
+      +'</div>';
+    setTimeout(function(){bar.innerHTML='';},4000);
+  }
+}
+
+function loginGoogle(){
+  var provider=new firebase.auth.GoogleAuthProvider();
+  var currentUser=firebase.auth().currentUser;
+  if(currentUser&&currentUser.isAnonymous){
+    // Vincular cuenta anónima con Google
+    currentUser.linkWithPopup(provider).then(function(result){
+      _uid=result.user.uid;_anon=false;
+      save();updateAuthBar();
+      toast('✅ Cuenta vinculada con Google');
+    }).catch(function(e){
+      if(e.code==='auth/credential-already-in-use'){
+        // Ya tiene cuenta Google — hacer merge de datos
+        var anonData=JSON.parse(JSON.stringify(S));
+        firebase.auth().signInWithCredential(e.credential).then(function(result){
+          _uid=result.user.uid;_anon=false;
+          // Cargar datos existentes y mergear
+          _db.collection('usuarios').doc(_uid).get().then(function(doc){
+            if(doc.exists&&doc.data().pets&&doc.data().pets.length){
+              // Usar datos de Firebase (más completos)
+              S.pets=doc.data().pets;S.pid=doc.data().pid||S.pets[0].id;
+            } else {
+              // Subir datos anónimos a nueva cuenta
+              S=anonData;save();
+            }
+            updateAuthBar();render();toast('✅ Sesión recuperada');
           });
-        }
-        _db=firebase.firestore();
-        firebase.auth().onAuthStateChanged(function(user){
-          if(user){_uid=user.uid;callback();}
-          else{firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});}
         });
-      };
-      document.head.appendChild(s3);
-    };
-    document.head.appendChild(s2);
-  };
-  document.head.appendChild(s1);
+      } else {
+        console.log('Link error',e);toast('Error al vincular: '+e.message);
+      }
+    });
+  } else {
+    firebase.auth().signInWithPopup(provider).then(function(result){
+      _uid=result.user.uid;_anon=false;updateAuthBar();
+      loadFromFirebase();toast('✅ Sesión iniciada');
+    }).catch(function(e){console.log('Login error',e);});
+  }
 }
 
 function save(){
