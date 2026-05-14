@@ -500,18 +500,29 @@ function doLogin(){
 }
 
 function save(){
-  // Save to localStorage as backup with timestamp
+  var now=new Date().toISOString();
+  // Save EVERYTHING (including photos) to localStorage
   try{
-    var saveData=Object.assign({},S,{updatedAt:new Date().toISOString()});
+    var saveData=Object.assign({},S,{updatedAt:now});
     localStorage.setItem('petcard4',JSON.stringify(saveData));
-  }catch(e){}
-  // Save to Firebase
+  }catch(e){console.log('localStorage full, trying without photos');
+    // Si localStorage está lleno, guardar sin fotos
+    try{
+      var petsNoPhoto=S.pets.map(function(p){
+        var vax=(p.vaccines||[]).map(function(v){return Object.assign({},v,{photo:null});});
+        return Object.assign({},p,{photo:null,vaccines:vax});
+      });
+      localStorage.setItem('petcard4',JSON.stringify(Object.assign({},S,{pets:petsNoPhoto,updatedAt:now})));
+    }catch(e2){}
+  }
+  // Save to Firebase WITHOUT photos (Firebase has 1MB limit per document)
   if(_db&&_uid){
     _saving=true;
     var icon=document.getElementById('save-icon');
     if(icon)icon.textContent='⏳';
+    // Save to Firebase WITH compressed photos
     _db.collection('usuarios').doc(_uid).set({
-      pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
+      pets:S.pets, pid:S.pid, updatedAt:now
     }).then(function(){
       _saving=false;
       if(icon)icon.textContent='💾';
@@ -534,39 +545,30 @@ function loadFromFirebase(){
     if(doc.exists){
       var data=doc.data();
       if(data.pets&&data.pets.length){
-        // Comparar fechas — usar los datos más recientes
         var fbUpdated=data.updatedAt||'';
         var localData=null;
         try{var ls=localStorage.getItem('petcard4');if(ls)localData=JSON.parse(ls);}catch(e){}
         var localUpdated=localData&&localData.updatedAt||'';
-        
-        if(localData&&localData.pets&&localData.pets.length&&localUpdated>fbUpdated){
-          // Los datos locales son más nuevos — subir a Firebase
-          console.log('Local data newer, uploading to Firebase');
-          save();
+        if(localData&&localData.pets&&localData.pets.length&&localUpdated>=fbUpdated){
+          // Datos locales más nuevos — usar locales
+          S.pets=localData.pets;
+          S.pid=localData.pid||localData.pets[0].id;
         } else {
-          // Firebase tiene datos más nuevos o iguales — usar Firebase
+          // Firebase más nuevo — usar Firebase
           S.pets=data.pets;
           S.pid=data.pid||data.pets[0].id;
-          try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+          try{localStorage.setItem('petcard4',JSON.stringify(Object.assign({},S,{updatedAt:fbUpdated})));}catch(e){}
         }
-        checkActivar();
-        render();
+        checkActivar();render();
       } else {
-        // Firebase vacío — usar datos locales si hay
-        checkActivar();
-        render();
+        checkActivar();render();
       }
     } else {
-      // Usuario nuevo — subir datos locales si hay
       if(S.pets&&S.pets.length){save();}
-      checkActivar();
-      render();
+      checkActivar();render();
     }
   }).catch(function(e){
-    console.log('Load error',e);
-    checkActivar();
-    render();
+    console.log('Load error',e);checkActivar();render();
   });
 }
 
@@ -820,13 +822,34 @@ function printCollar(mode){
 
 
 /* ── FOTO ── */
+/* ── COMPRIMIR IMAGEN ── */
+function compressImage(dataUrl, maxSize, quality, callback){
+  maxSize = maxSize || 400;
+  quality = quality || 0.5;
+  var img = new Image();
+  img.onload = function(){
+    var canvas = document.createElement('canvas');
+    var w = img.width, h = img.height;
+    if(w > h){ if(w > maxSize){h = h*maxSize/w; w = maxSize;} }
+    else{ if(h > maxSize){w = w*maxSize/h; h = maxSize;} }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    var compressed = canvas.toDataURL('image/jpeg', quality);
+    console.log('Photo compressed:', Math.round(dataUrl.length/1024)+'KB → '+Math.round(compressed.length/1024)+'KB');
+    callback(compressed);
+  };
+  img.src = dataUrl;
+}
+
 function handlePhoto(evt){
   var file=evt.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
-    S.photoTemp=e.target.result;
-    var prev=document.getElementById('photo-prev');
-    prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    compressImage(e.target.result, 400, 0.5, function(compressed){
+      S.photoTemp=compressed;
+      var prev=document.getElementById('photo-prev');
+      prev.innerHTML='<img src="'+compressed+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -834,9 +857,11 @@ function handlePhotoHero(evt){
   var file=evt.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
-    var p=apet();if(!p)return;
-    p.photo=e.target.result;
-    save();render();
+    compressImage(e.target.result, 400, 0.5, function(compressed){
+      var p=apet();if(!p)return;
+      p.photo=compressed;
+      save();render();
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -886,11 +911,13 @@ function handleVaxFoto(evt){
   var file=evt.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
-    var prev=document.getElementById('vx-foto-preview');
-    prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
-    prev.style.padding='0';
-    document.getElementById('vx-foto-clear').style.display='block';
-    window._vxFoto=e.target.result;
+    compressImage(e.target.result, 800, 0.6, function(compressed){
+      var prev=document.getElementById('vx-foto-preview');
+      prev.innerHTML='<img src="'+compressed+'" style="width:100%;height:100%;object-fit:cover">';
+      prev.style.padding='0';
+      document.getElementById('vx-foto-clear').style.display='block';
+      window._vxFoto=compressed;
+    });
   };
   reader.readAsDataURL(file);
 }
