@@ -502,7 +502,6 @@ function renderFicha(){
   document.getElementById('f-medical').innerHTML=med||'<div style="color:var(--tx3);font-size:13px;text-align:center;padding:8px">Sin datos médicos</div>';
   var vw=document.getElementById('f-vax-card');
   vw.innerHTML=p.vaccines&&p.vaccines.length?'<div class="card"><div class="ctitle">Vacunas</div>'+p.vaccines.map(function(v){return'<div class="vrow"><div><div class="vn">'+v.n+'</div><div class="vd">'+fmt(v.d)+'</div></div>'+chipStatus(v.s)+'</div>';}).join('')+'</div>':'';
-  document.getElementById('f-edit-bar').style.display=isOwner?'flex':'none';
 }
 
 window.showEdit=function(){
