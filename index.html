@@ -451,6 +451,16 @@ function showAuthModal(mode){
   document.body.appendChild(modal);
 }
 
+function doLogout(){
+  firebase.auth().signOut().then(function(){
+    _uid=null;_anon=true;_userEmail='';
+    S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
+    try{localStorage.removeItem('petcard4');}catch(e){}
+    updateAuthBar();render();
+    toast('Sesión cerrada');
+  }).catch(function(e){toast('Error: '+e.message);});
+}
+
 function doRegister(){
   var email=document.getElementById('auth-email').value.trim();
   var pass=document.getElementById('auth-pass').value;
@@ -490,8 +500,11 @@ function doLogin(){
 }
 
 function save(){
-  // Save to localStorage as backup
-  try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+  // Save to localStorage as backup with timestamp
+  try{
+    var saveData=Object.assign({},S,{updatedAt:new Date().toISOString()});
+    localStorage.setItem('petcard4',JSON.stringify(saveData));
+  }catch(e){}
   // Save to Firebase
   if(_db&&_uid){
     _saving=true;
@@ -521,15 +534,32 @@ function loadFromFirebase(){
     if(doc.exists){
       var data=doc.data();
       if(data.pets&&data.pets.length){
-        S.pets=data.pets;
-        S.pid=data.pid||data.pets[0].id;
-        // Sync to localStorage
-        try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+        // Comparar fechas — usar los datos más recientes
+        var fbUpdated=data.updatedAt||'';
+        var localData=null;
+        try{var ls=localStorage.getItem('petcard4');if(ls)localData=JSON.parse(ls);}catch(e){}
+        var localUpdated=localData&&localData.updatedAt||'';
+        
+        if(localData&&localData.pets&&localData.pets.length&&localUpdated>fbUpdated){
+          // Los datos locales son más nuevos — subir a Firebase
+          console.log('Local data newer, uploading to Firebase');
+          save();
+        } else {
+          // Firebase tiene datos más nuevos o iguales — usar Firebase
+          S.pets=data.pets;
+          S.pid=data.pid||data.pets[0].id;
+          try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+        }
+        checkActivar();
+        render();
+      } else {
+        // Firebase vacío — usar datos locales si hay
         checkActivar();
         render();
       }
     } else {
-      // New user — no data yet
+      // Usuario nuevo — subir datos locales si hay
+      if(S.pets&&S.pets.length){save();}
       checkActivar();
       render();
     }
