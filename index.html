@@ -408,21 +408,22 @@ function fbInit(callback){
 
 function updateAuthBar(){
   var bar=document.getElementById('auth-bar');
-  if(!bar)return;
+  var sbtn=document.getElementById('session-btn');
   if(_anon){
-    bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:12px 20px;background:#E6F1FB;border-bottom:1px solid rgba(24,95,165,.2)">'
+    if(bar)bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:12px 20px;background:#E6F1FB;border-bottom:1px solid rgba(24,95,165,.2)">'
       +'<span style="font-size:20px">☁️</span>'
       +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:#042C53">Guardá tus datos en la nube</div>'
       +'<div style="font-size:11px;color:#185FA5">Para no perderlos si borrás el navegador</div></div>'
-      +'<button onclick="showAuthModal()" style="padding:7px 14px;background:#185FA5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Iniciar sesión</button>'
       +'</div>';
+    if(sbtn){sbtn.textContent='Iniciar sesión';sbtn.style.color='#185FA5';sbtn.style.borderColor='#185FA5';}
   } else {
-    bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 20px;background:#E1F5EE;border-bottom:1px solid rgba(29,158,117,.2)">'
-      +'<span style="font-size:18px">✅</span>'
-      +'<div style="flex:1;font-size:13px;color:#085041">Datos guardados — <strong>'+(_userEmail||'cuenta vinculada')+'</strong></div>'
-      +'<button onclick="doLogout()" style="padding:6px 12px;background:none;border:1px solid rgba(8,80,65,.3);border-radius:8px;font-size:12px;font-weight:600;color:#085041;cursor:pointer;font-family:inherit;white-space:nowrap">Cerrar sesión</button>'
-      +'</div>';
+    if(bar)bar.innerHTML='';
+    if(sbtn){sbtn.textContent='Cerrar sesión';sbtn.style.color='#A32D2D';sbtn.style.borderColor='rgba(163,45,45,.4)';}
   }
+}
+function onSessionBtn(){
+  if(_anon) showAuthModal('login');
+  else doLogout();
 }
 
 function doLogout(){
