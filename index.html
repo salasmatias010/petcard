@@ -419,10 +419,19 @@ function updateAuthBar(){
   } else {
     bar.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 20px;background:#E1F5EE;border-bottom:1px solid rgba(29,158,117,.2)">'
       +'<span style="font-size:18px">✅</span>'
-      +'<div style="font-size:13px;color:#085041">Datos guardados en la nube — <strong>'+(_userEmail||'cuenta vinculada')+'</strong></div>'
+      +'<div style="flex:1;font-size:13px;color:#085041">Datos guardados — <strong>'+(_userEmail||'cuenta vinculada')+'</strong></div>'
+      +'<button onclick="doLogout()" style="padding:6px 12px;background:none;border:1px solid rgba(8,80,65,.3);border-radius:8px;font-size:12px;font-weight:600;color:#085041;cursor:pointer;font-family:inherit;white-space:nowrap">Cerrar sesión</button>'
       +'</div>';
-    setTimeout(function(){var bar=document.getElementById('auth-bar');if(bar)bar.innerHTML='';},5000);
   }
+}
+
+function doLogout(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  firebase.auth().signOut().then(function(){
+    _uid=null;_anon=true;_userEmail='';
+    showToast('👋 Sesión cerrada');
+    updateAuthBar();
+  }).catch(function(e){showToast('Error: '+e.message);});
 }
 
 var _userEmail='';
