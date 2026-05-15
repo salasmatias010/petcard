@@ -1,6 +1,6 @@
-const CACHE = 'petcard-v5';
+const CACHE = 'petcard-v6';
 const FILES = [
-  './petcard.html',
+  './index.html',
   './manifest.json'
 ];
 
@@ -27,20 +27,18 @@ self.addEventListener('activate', function(e) {
   self.clients.claim();
 });
 
-// Fetch: serve from cache, fallback to network
+// Fetch: network first, fallback to cache
 self.addEventListener('fetch', function(e) {
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      return cached || fetch(e.request).then(function(response) {
-        // Cache new requests dynamically
-        return caches.open(CACHE).then(function(cache) {
-          cache.put(e.request, response.clone());
-          return response;
-        });
+    fetch(e.request).then(function(response) {
+      return caches.open(CACHE).then(function(cache) {
+        cache.put(e.request, response.clone());
+        return response;
       });
     }).catch(function() {
-      // Offline fallback
-      return caches.match('./petcard.html');
+      return caches.match(e.request).then(function(cached) {
+        return cached || caches.match('./index.html');
+      });
     })
   );
 });
