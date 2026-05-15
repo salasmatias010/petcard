@@ -443,18 +443,6 @@ function chipStatus(s){if(s==='ok')return'<span class="chip-ok">OK</span>';if(s=
 var _authMode = 'register';
 function switchAuthTab(mode){
   _authMode = mode;
-  var btnLogin = document.getElementById('tab-login');
-  var btnReg = document.getElementById('tab-register');
-  var authBtn = document.getElementById('auth-btn');
-  if(mode === 'login'){
-    btnLogin.style.background='var(--teal)';btnLogin.style.color='#fff';
-    btnReg.style.background='transparent';btnReg.style.color='var(--tx2)';
-    authBtn.textContent='Iniciar sesión';
-  } else {
-    btnReg.style.background='var(--teal)';btnReg.style.color='#fff';
-    btnLogin.style.background='transparent';btnLogin.style.color='var(--tx2)';
-    authBtn.textContent='Crear cuenta';
-  }
   document.getElementById('auth-error').style.display='none';
 }
 async function doAuth(){
