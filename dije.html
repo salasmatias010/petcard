@@ -441,11 +441,11 @@ function chipStatus(s){if(s==='ok')return'<span class="chip-ok">OK</span>';if(s=
 
 
 var _authMode = 'register';
-function switchAuthTab(mode){
+window.switchAuthTab = function switchAuthTab(mode){
   _authMode = mode;
   document.getElementById('auth-error').style.display='none';
 }
-async function doAuth(){
+window.doAuth = async function doAuth(){
   var email = document.getElementById('auth-email').value.trim();
   var pass = document.getElementById('auth-pass').value.trim();
   var errEl = document.getElementById('auth-error');
