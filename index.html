@@ -1234,10 +1234,12 @@ function verFoto(vaxId){
 
 /* ── INIT ── */
 // Init con Firebase
-load(); // Load from localStorage first
+// Data loads after auth state is known (see onAuthStateChanged)
 fbInit(function(){
-  loadFromFirebase(); // Then sync from Firebase
+  if(!_anon) load(); // Only load local data if logged in
+  loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
+  render();
 });
 
 /* ── ACTIVAR DESDE DIJE ── */
