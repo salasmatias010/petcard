@@ -184,6 +184,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   </div>
   <div class="fg"><label>Veterinario</label><input id="f-vet" placeholder="Dr. Pérez"></div>
   <div class="fg"><label>Alergias</label><input id="f-alergia" placeholder="Ninguna"></div>
+  <div class="fg"><label>Condiciones médicas importantes</label><input id="f-condicion" placeholder="Ej: Epilepsia, Diabetes, Cardiopatía..."></div>
   <div class="fg"><label>Teléfono dueño</label><input type="tel" id="f-tel" placeholder="+54 221 555-1234"></div>
   <div class="fg"><label>Dirección</label><input id="f-dir" placeholder="Calle 50 N°123, La Plata"></div>
   <div class="fg"><label>Castrado/a</label><select id="f-cast"><option value="si">Sí</option><option value="no">No</option></select></div>
@@ -607,6 +608,7 @@ function rPerfil(p){
     +'<div class="drow"><span class="dlbl">Grupo sanguíneo</span><span class="dval">'+p.sangre+'</span></div>'
     +'<div class="drow"><span class="dlbl">Veterinario</span><span class="dval">'+p.vet+'</span></div>'
     +'<div class="drow"><span class="dlbl">Alergias</span><span class="dval">'+p.alergia+'</span></div>'
+    +(p.condicion?'<div class="drow"><span class="dlbl">⚠️ Condición médica</span><span class="dval" style="color:#A32D2D;font-weight:600">'+p.condicion+'</span></div>':'')
     +'<div class="drow"><span class="dlbl">Teléfono dueño</span><span class="dval">'+p.tel+'</span></div>'
     +'<div class="drow"><span class="dlbl">Dirección</span><span class="dval">'+p.dir+'</span></div>'
     +'</div>'
@@ -848,7 +850,7 @@ function ovlClose(e,id){if(e.target===document.getElementById(id))closeModal(id)
 function openAddPet(){
   S.editId=null;S.photoTemp=null;
   document.getElementById('m-addpet-h').textContent='Nueva mascota';
-  ['f-name','f-emoji','f-raza','f-edad','f-peso','f-sangre','f-vet','f-alergia','f-tel','f-dir'].forEach(function(i){document.getElementById(i).value='';}); 
+  ['f-name','f-emoji','f-raza','f-edad','f-peso','f-sangre','f-vet','f-alergia','f-condicion','f-tel','f-dir'].forEach(function(i){document.getElementById(i).value='';}); 
   document.getElementById('f-sexo').value='Macho';
   document.getElementById('f-cast').value='si';
   document.getElementById('photo-prev').innerHTML='🐾';
@@ -868,6 +870,7 @@ function openEdit(){
   document.getElementById('f-sangre').value=p.sangre;
   document.getElementById('f-vet').value=p.vet;
   document.getElementById('f-alergia').value=p.alergia;
+  document.getElementById('f-condicion').value=p.condicion||'';
   document.getElementById('f-tel').value=p.tel;
   document.getElementById('f-dir').value=p.dir;
   document.getElementById('f-cast').value=p.cast;
@@ -876,7 +879,7 @@ function openEdit(){
   openModal('m-addpet');
 }
 function savePet(){
-  var d={name:document.getElementById('f-name').value.trim()||'Mascota',emoji:document.getElementById('f-emoji').value.trim()||'🐾',photo:S.photoTemp||null,raza:document.getElementById('f-raza').value.trim(),edad:document.getElementById('f-edad').value.trim(),sexo:document.getElementById('f-sexo').value,peso:document.getElementById('f-peso').value.trim(),sangre:document.getElementById('f-sangre').value.trim(),vet:document.getElementById('f-vet').value.trim(),alergia:document.getElementById('f-alergia').value.trim(),tel:document.getElementById('f-tel').value.trim(),dir:document.getElementById('f-dir').value.trim(),cast:document.getElementById('f-cast').value};
+  var d={name:document.getElementById('f-name').value.trim()||'Mascota',emoji:document.getElementById('f-emoji').value.trim()||'🐾',photo:S.photoTemp||null,raza:document.getElementById('f-raza').value.trim(),edad:document.getElementById('f-edad').value.trim(),sexo:document.getElementById('f-sexo').value,peso:document.getElementById('f-peso').value.trim(),sangre:document.getElementById('f-sangre').value.trim(),vet:document.getElementById('f-vet').value.trim(),alergia:document.getElementById('f-alergia').value.trim(),condicion:document.getElementById('f-condicion').value.trim(),tel:document.getElementById('f-tel').value.trim(),dir:document.getElementById('f-dir').value.trim(),cast:document.getElementById('f-cast').value};
   if(S.editId){var p=S.pets.find(function(x){return x.id===S.editId;});if(p)Object.assign(p,d);}
   else{d.id=uid();d.vaccines=[];d.history=[];d.reminders=[];d.pesos=[];S.pets.push(d);S.pid=d.id;}
   save();closeModal('m-addpet');render();
