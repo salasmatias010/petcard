@@ -487,8 +487,9 @@ async function init(){
     else{
       currentPet=data.pet;
       isOwner=false; // reset siempre
-      const ok=localStorage.getItem('petcard_owner_'+currentCode);
-      if(ok&&ok===data.ownerKey)isOwner=true;
+      if(currentUser&&data.ownerKey&&currentUser.uid===data.ownerKey)isOwner=true;
+      // fallback localStorage para dijes activados antes
+      if(!isOwner){const ok=localStorage.getItem('petcard_owner_'+currentCode);if(ok&&ok===data.ownerKey)isOwner=true;}
       renderFicha();show('s-ficha');
       // Si NO es el dueño → notificar por WhatsApp con ubicación
       if(!isOwner&&data.pet&&data.pet.tel){
@@ -555,7 +556,7 @@ window.activateDije=async function(){
   var prev=document.getElementById('act-photo-prev');
   if(prev.style.opacity==='0.6'){showToast('⏳ Esperá que termine de subir la foto');return;}
   var btn=document.querySelector('#s-activate .btn-p');btn.textContent='Guardando...';btn.disabled=true;
-  var ownerKey=Math.random().toString(36).slice(2)+Date.now().toString(36);
+  var ownerKey=currentUser?currentUser.uid:(Math.random().toString(36).slice(2)+Date.now().toString(36));
   var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',condicion:document.getElementById('act-condicion').value.trim(),vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
   try{
     await setDoc(doc(db,'dijes',currentCode),{activated:true,ownerKey,pet,createdAt:new Date().toISOString()});
