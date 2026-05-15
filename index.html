@@ -126,7 +126,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
     <div class="ibtn" title="Notificaciones" onclick="requestNotifPerms()">🔔</div>
     <div class="ibtn" title="Exportar / Importar" onclick="openModal('m-data')">💾</div>
     <div id="save-icon" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--tx3)">☁️</div>
-    <div class="ibtn" title="Cerrar sesión" onclick="doLogout()" id="btn-logout" style="display:none">🚪</div>
   </div>
 </div>
 
@@ -397,12 +396,7 @@ function fbInit(callback){
       if(user){
         _uid=user.uid;
         _anon=user.isAnonymous;
-        _userEmail=user.email||'';
         updateAuthBar();
-        if(!user.isAnonymous){
-          var lb=document.getElementById('btn-logout');
-          if(lb)lb.style.display='flex';
-        }
         callback();
       } else {
         firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});
@@ -427,24 +421,8 @@ function updateAuthBar(){
       +'<span style="font-size:18px">✅</span>'
       +'<div style="font-size:13px;color:#085041">Datos guardados en la nube — <strong>'+(_userEmail||'cuenta vinculada')+'</strong></div>'
       +'</div>';
-    // Mostrar botón de cerrar sesión
-    var logoutBtn=document.getElementById('btn-logout');
-    if(logoutBtn)logoutBtn.style.display='flex';
     setTimeout(function(){var bar=document.getElementById('auth-bar');if(bar)bar.innerHTML='';},5000);
   }
-}
-
-function doLogout(){
-  if(!confirm('¿Cerrar sesión?'))return;
-  firebase.auth().signOut().then(function(){
-    _uid=null;_anon=true;_userEmail='';
-    S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
-    try{localStorage.removeItem('petcard4');}catch(e){}
-    var logoutBtn=document.getElementById('btn-logout');
-    if(logoutBtn)logoutBtn.style.display='none';
-    updateAuthBar();render();
-    toast('Sesión cerrada');
-  }).catch(function(e){toast('Error: '+e.message);});
 }
 
 var _userEmail='';
@@ -512,29 +490,15 @@ function doLogin(){
 }
 
 function save(){
-  var now=new Date().toISOString();
-  // Save EVERYTHING (including photos) to localStorage
-  try{
-    var saveData=Object.assign({},S,{updatedAt:now});
-    localStorage.setItem('petcard4',JSON.stringify(saveData));
-  }catch(e){console.log('localStorage full, trying without photos');
-    // Si localStorage está lleno, guardar sin fotos
-    try{
-      var petsNoPhoto=S.pets.map(function(p){
-        var vax=(p.vaccines||[]).map(function(v){return Object.assign({},v,{photo:null});});
-        return Object.assign({},p,{photo:null,vaccines:vax});
-      });
-      localStorage.setItem('petcard4',JSON.stringify(Object.assign({},S,{pets:petsNoPhoto,updatedAt:now})));
-    }catch(e2){}
-  }
-  // Save to Firebase WITHOUT photos (Firebase has 1MB limit per document)
+  // Save to localStorage as backup
+  try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+  // Save to Firebase
   if(_db&&_uid){
     _saving=true;
     var icon=document.getElementById('save-icon');
     if(icon)icon.textContent='⏳';
-    // Save to Firebase WITH compressed photos
     _db.collection('usuarios').doc(_uid).set({
-      pets:S.pets, pid:S.pid, updatedAt:now
+      pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
     }).then(function(){
       _saving=false;
       if(icon)icon.textContent='💾';
@@ -557,37 +521,22 @@ function loadFromFirebase(){
     if(doc.exists){
       var data=doc.data();
       if(data.pets&&data.pets.length){
-        var fbUpdated=data.updatedAt||'';
-        var localData=null;
-        try{var ls=localStorage.getItem('petcard4');if(ls)localData=JSON.parse(ls);}catch(e){}
-        var localUpdated=localData&&localData.updatedAt||'';
-
-        // En dispositivo nuevo (sin localStorage) siempre usar Firebase
-        var isNewDevice=!localData||!localData.pets||!localData.pets.length;
-        // Contar datos en Firebase vs local
-        var fbTotal=data.pets.reduce(function(acc,p){return acc+(p.vaccines||[]).length+(p.history||[]).length+(p.reminders||[]).length;},0);
-        var localTotal=localData&&localData.pets?localData.pets.reduce(function(acc,p){return acc+(p.vaccines||[]).length+(p.history||[]).length+(p.reminders||[]).length;},0):0;
-        // Usar Firebase si es dispositivo nuevo, tiene más datos, o es más reciente
-        var useFirebase=isNewDevice||fbTotal>localTotal||(fbTotal===localTotal&&fbUpdated>=localUpdated);
-
-        if(useFirebase){
-          S.pets=data.pets;
-          S.pid=data.pid||data.pets[0].id;
-          try{localStorage.setItem('petcard4',JSON.stringify(Object.assign({},S,{updatedAt:fbUpdated})));}catch(e){}
-        } else {
-          S.pets=localData.pets;
-          S.pid=localData.pid||localData.pets[0].id;
-        }
-        checkActivar();render();
-      } else {
-        checkActivar();render();
+        S.pets=data.pets;
+        S.pid=data.pid||data.pets[0].id;
+        // Sync to localStorage
+        try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
+        checkActivar();
+        render();
       }
     } else {
-      if(S.pets&&S.pets.length){save();}
-      checkActivar();render();
+      // New user — no data yet
+      checkActivar();
+      render();
     }
   }).catch(function(e){
-    console.log('Load error',e);checkActivar();render();
+    console.log('Load error',e);
+    checkActivar();
+    render();
   });
 }
 
@@ -841,48 +790,45 @@ function printCollar(mode){
 
 
 /* ── FOTO ── */
-/* ── COMPRIMIR IMAGEN ── */
-function compressImage(dataUrl, maxSize, quality, callback){
-  maxSize = maxSize || 400;
-  quality = quality || 0.5;
-  var img = new Image();
-  img.onload = function(){
-    var canvas = document.createElement('canvas');
-    var w = img.width, h = img.height;
-    if(w > h){ if(w > maxSize){h = h*maxSize/w; w = maxSize;} }
-    else{ if(h > maxSize){w = w*maxSize/h; h = maxSize;} }
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    var compressed = canvas.toDataURL('image/jpeg', quality);
-    console.log('Photo compressed:', Math.round(dataUrl.length/1024)+'KB → '+Math.round(compressed.length/1024)+'KB');
-    callback(compressed);
-  };
-  img.src = dataUrl;
+// ── Cloudinary ──────────────────────────────────────────────
+var CLOUDINARY_CLOUD='dfmkygkuj';
+var CLOUDINARY_PRESET='petcard_fotos';
+async function subirFotoCloudinary(file){
+  var fd=new FormData();
+  fd.append('file',file);
+  fd.append('upload_preset',CLOUDINARY_PRESET);
+  fd.append('folder','petcard');
+  var res=await fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_CLOUD+'/image/upload',{method:'POST',body:fd});
+  if(!res.ok)throw new Error('Error al subir foto');
+  var data=await res.json();
+  return data.secure_url.replace('/upload/','/upload/w_400,q_auto,f_webp/');
 }
 
-function handlePhoto(evt){
+async function handlePhoto(evt){
   var file=evt.target.files[0];if(!file)return;
+  var prev=document.getElementById('photo-prev');
   var reader=new FileReader();
-  reader.onload=function(e){
-    compressImage(e.target.result, 400, 0.5, function(compressed){
-      S.photoTemp=compressed;
-      var prev=document.getElementById('photo-prev');
-      prev.innerHTML='<img src="'+compressed+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
-    });
-  };
+  reader.onload=function(e){prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';};
   reader.readAsDataURL(file);
+  prev.style.opacity='0.6';
+  try{
+    S.photoTemp=await subirFotoCloudinary(file);
+    prev.style.opacity='1';
+  }catch(e){
+    showToast('⚠️ No se pudo subir la foto');
+    S.photoTemp=null;prev.style.opacity='1';
+  }
 }
-function handlePhotoHero(evt){
+async function handlePhotoHero(evt){
   var file=evt.target.files[0];if(!file)return;
+  var p=apet();if(!p)return;
   var reader=new FileReader();
-  reader.onload=function(e){
-    compressImage(e.target.result, 400, 0.5, function(compressed){
-      var p=apet();if(!p)return;
-      p.photo=compressed;
-      save();render();
-    });
-  };
+  reader.onload=function(e){p.photo=e.target.result;render();};
   reader.readAsDataURL(file);
+  try{
+    var url=await subirFotoCloudinary(file);
+    p.photo=url;save();render();
+  }catch(e){showToast('⚠️ No se pudo subir la foto');}
 }
 
 /* ── MODALS ── */
@@ -926,19 +872,24 @@ function savePet(){
   save();closeModal('m-addpet');render();
 }
 function delPet(){var p=apet();if(!p||!confirm('¿Eliminar a '+p.name+'?'))return;S.pets=S.pets.filter(function(x){return x.id!==p.id;});S.pid=S.pets.length?S.pets[0].id:null;save();render();}
-function handleVaxFoto(evt){
+async function handleVaxFoto(evt){
   var file=evt.target.files[0];if(!file)return;
+  var prev=document.getElementById('vx-foto-preview');
   var reader=new FileReader();
   reader.onload=function(e){
-    compressImage(e.target.result, 800, 0.6, function(compressed){
-      var prev=document.getElementById('vx-foto-preview');
-      prev.innerHTML='<img src="'+compressed+'" style="width:100%;height:100%;object-fit:cover">';
-      prev.style.padding='0';
-      document.getElementById('vx-foto-clear').style.display='block';
-      window._vxFoto=compressed;
-    });
+    prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+    prev.style.padding='0';
+    document.getElementById('vx-foto-clear').style.display='block';
   };
   reader.readAsDataURL(file);
+  prev.style.opacity='0.6';
+  try{
+    window._vxFoto=await subirFotoCloudinary(file);
+    prev.style.opacity='1';
+  }catch(e){
+    showToast('⚠️ No se pudo subir la foto del comprobante');
+    window._vxFoto=null;prev.style.opacity='1';
+  }
 }
 function clearVaxFoto(){
   window._vxFoto=null;
@@ -1269,20 +1220,12 @@ function verFoto(vaxId){
 }
 
 /* ── INIT ── */
+// Init con Firebase
 load(); // Load from localStorage first
-// Show loading spinner while waiting for Firebase
-var _fbLoaded=false;
 fbInit(function(){
-  _fbLoaded=true;
   loadFromFirebase(); // Then sync from Firebase
   checkScan();checkNotifBar();scheduleNotifs();
 });
-// Si Firebase tarda más de 3 segundos, renderizar con datos locales
-setTimeout(function(){
-  if(!_fbLoaded){
-    checkActivar();render();checkScan();checkNotifBar();scheduleNotifs();
-  }
-},3000);
 
 /* ── ACTIVAR DESDE DIJE ── */
 function checkActivar(){
