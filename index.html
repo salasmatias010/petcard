@@ -125,7 +125,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <div class="topbtns">
     <div class="ibtn" title="Notificaciones" onclick="requestNotifPerms()">🔔</div>
     <div class="ibtn" title="Exportar / Importar" onclick="openModal('m-data')">💾</div>
-    <div id="save-icon" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--tx3)">☁️</div>
+    <div id="session-btn" onclick="onSessionBtn()" style="padding:5px 11px;border-radius:20px;border:1px solid var(--bor2);font-size:12px;font-weight:600;cursor:pointer;color:var(--tx2);background:var(--surf);white-space:nowrap;align-self:center">...</div>
   </div>
 </div>
 
@@ -505,16 +505,12 @@ function save(){
   // Save to Firebase
   if(_db&&_uid){
     _saving=true;
-    var icon=document.getElementById('save-icon');
-    if(icon)icon.textContent='⏳';
-    _db.collection('usuarios').doc(_uid).set({
+        _db.collection('usuarios').doc(_uid).set({
       pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
     }).then(function(){
       _saving=false;
-      if(icon)icon.textContent='💾';
     }).catch(function(e){
       console.log('Save error',e);
-      if(icon)icon.textContent='💾';
     });
   }
 }
