@@ -107,7 +107,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
       </div>
       <div class="fg"><label>Alergias</label><input id="act-alergia" placeholder="Ninguna"></div>
       <div class="fg"><label>Veterinario</label><input id="act-vet" placeholder="Dr. Pérez"></div>
-      <div class="fg"><label>⚠️ Condiciones médicas importantes</label><input id="act-condiciones" placeholder="Ej: Epilepsia, Diabetes, Cardiopatía"></div>
     </div>
     <div class="card">
       <div class="ctitle">Contacto del dueño *</div>
@@ -183,7 +182,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
         <div class="fg"><label>Sangre</label><input id="edit-sangre"></div>
       </div>
       <div class="fg"><label>Alergias</label><input id="edit-alergia"></div>
-      <div class="fg"><label>⚠️ Condiciones médicas importantes</label><input id="edit-condiciones" placeholder="Ej: Epilepsia, Diabetes"></div>
       <div class="fg"><label>Veterinario</label><input id="edit-vet"></div>
     </div>
     <div class="card">
@@ -444,22 +442,65 @@ async function init(){
   }catch(e){console.error(e);show('s-error');}
 }
 
-window.handleActPhoto=function(evt){
+// ── Cloudinary ──────────────────────────────────────────────
+var CLOUDINARY_CLOUD='dfmkygkuj';
+var CLOUDINARY_PRESET='petcard_fotos';
+
+async function subirFotoCloudinary(file){
+  var fd=new FormData();
+  fd.append('file',file);
+  fd.append('upload_preset',CLOUDINARY_PRESET);
+  fd.append('folder','petcard');
+  var res=await fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_CLOUD+'/image/upload',{method:'POST',body:fd});
+  if(!res.ok)throw new Error('Error al subir foto');
+  var data=await res.json();
+  // URL optimizada: webp, ancho 400px, calidad auto
+  return data.secure_url.replace('/upload/','/upload/w_400,q_auto,f_webp/');
+}
+
+window.handleActPhoto=async function(evt){
   var f=evt.target.files[0];if(!f)return;
-  var r=new FileReader();r.onload=function(e){actPhotoTemp=e.target.result;var p=document.getElementById('act-photo-prev');p.innerHTML='<img src="'+e.target.result+'">';};r.readAsDataURL(f);
+  var prev=document.getElementById('act-photo-prev');
+  // Mostrar preview local inmediato
+  var reader=new FileReader();
+  reader.onload=function(e){prev.innerHTML='<img src="'+e.target.result+'">';};
+  reader.readAsDataURL(f);
+  // Subir a Cloudinary en background
+  prev.style.opacity='0.6';
+  try{
+    actPhotoTemp=await subirFotoCloudinary(f);
+    prev.style.opacity='1';
+  }catch(e){
+    showToast('⚠️ No se pudo subir la foto, se guardará sin imagen');
+    actPhotoTemp=null;prev.style.opacity='1';
+  }
 };
-window.handleEditPhoto=function(evt){
+window.handleEditPhoto=async function(evt){
   var f=evt.target.files[0];if(!f)return;
-  var r=new FileReader();r.onload=function(e){editPhotoTemp=e.target.result;document.getElementById('edit-photo-prev').innerHTML='<img src="'+e.target.result+'">';};r.readAsDataURL(f);
+  var prev=document.getElementById('edit-photo-prev');
+  var reader=new FileReader();
+  reader.onload=function(e){prev.innerHTML='<img src="'+e.target.result+'">';};
+  reader.readAsDataURL(f);
+  prev.style.opacity='0.6';
+  try{
+    editPhotoTemp=await subirFotoCloudinary(f);
+    prev.style.opacity='1';
+  }catch(e){
+    showToast('⚠️ No se pudo subir la foto');
+    prev.style.opacity='1';
+  }
 };
 
 window.activateDije=async function(){
   var name=document.getElementById('act-name').value.trim();
   var tel=document.getElementById('act-tel').value.trim();
   if(!name||!tel){showToast('⚠️ Nombre y teléfono son obligatorios');return;}
+  // Si la foto sigue en opacity 0.6 todavía está subiendo
+  var prev=document.getElementById('act-photo-prev');
+  if(prev.style.opacity==='0.6'){showToast('⏳ Esperá que termine de subir la foto');return;}
   var btn=document.querySelector('#s-activate .btn-p');btn.textContent='Guardando...';btn.disabled=true;
   var ownerKey=Math.random().toString(36).slice(2)+Date.now().toString(36);
-  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',condiciones:document.getElementById('act-condiciones').value.trim(),vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
+  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
   try{
     await setDoc(doc(db,'dijes',currentCode),{activated:true,ownerKey,pet,createdAt:new Date().toISOString()});
     localStorage.setItem('petcard_owner_'+currentCode,ownerKey);
@@ -495,14 +536,7 @@ function renderFicha(){
   document.getElementById('f-whatsapp').href='https://wa.me/'+tel+'?text='+encodeURIComponent(msgBase);
   if(p.tel2){document.getElementById('f-tel2-wrap').style.display='block';document.getElementById('f-call2').href='tel:'+p.tel2;document.getElementById('f-tel2-text').textContent=p.tel2;}
   var al=document.getElementById('f-alergia-warn');
-  var warnings='';
-  if(p.condiciones){
-    warnings+='<div style="background:#FCEBEB;border:1px solid rgba(163,45,45,.2);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center"><span style="font-size:22px">🚨</span><div><div style="font-size:12px;font-weight:600;color:#A32D2D">CONDICIÓN MÉDICA</div><div style="font-size:14px;color:#501313;font-weight:500">'+p.condiciones+'</div></div></div>';
-  }
-  if(p.alergia&&p.alergia!=='Ninguna'){
-    warnings+='<div style="background:#FCEBEB;border:1px solid rgba(163,45,45,.2);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center"><span style="font-size:22px">⚠️</span><div><div style="font-size:12px;font-weight:600;color:#A32D2D">ALERGIA</div><div style="font-size:14px;color:#501313;font-weight:500">'+p.alergia+'</div></div></div>';
-  }
-  al.innerHTML=warnings;
+  al.innerHTML=p.alergia&&p.alergia!=='Ninguna'?'<div style="background:#FCEBEB;border:1px solid rgba(163,45,45,.2);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center"><span style="font-size:22px">⚠️</span><div><div style="font-size:12px;font-weight:600;color:#A32D2D">ALERGIA</div><div style="font-size:14px;color:#501313;font-weight:500">'+p.alergia+'</div></div></div>':'';
   var med='';
   if(p.peso)med+='<div class="drow"><span class="dlbl">Peso</span><span class="dval">'+p.peso+'</span></div>';
   if(p.sangre)med+='<div class="drow"><span class="dlbl">Sangre</span><span class="dval">'+p.sangre+'</span></div>';
@@ -511,19 +545,22 @@ function renderFicha(){
   document.getElementById('f-medical').innerHTML=med||'<div style="color:var(--tx3);font-size:13px;text-align:center;padding:8px">Sin datos médicos</div>';
   var vw=document.getElementById('f-vax-card');
   vw.innerHTML=p.vaccines&&p.vaccines.length?'<div class="card"><div class="ctitle">Vacunas</div>'+p.vaccines.map(function(v){return'<div class="vrow"><div><div class="vn">'+v.n+'</div><div class="vd">'+fmt(v.d)+'</div></div>'+chipStatus(v.s)+'</div>';}).join('')+'</div>':'';
+  document.getElementById('f-edit-bar').style.display=isOwner?'flex':'none';
 }
 
 window.showEdit=function(){
   var p=currentPet;editPhotoTemp=p.photo||null;
-  document.getElementById('edit-name').value=p.name||'';document.getElementById('edit-emoji').value=p.emoji||'🐾';document.getElementById('edit-raza').value=p.raza||'';document.getElementById('edit-edad').value=p.edad||'';document.getElementById('edit-sexo').value=p.sexo||'Macho';document.getElementById('edit-cast').value=p.cast||'si';document.getElementById('edit-peso').value=p.peso||'';document.getElementById('edit-sangre').value=p.sangre||'';document.getElementById('edit-alergia').value=p.alergia||'';document.getElementById('edit-condiciones').value=p.condiciones||'';document.getElementById('edit-vet').value=p.vet||'';document.getElementById('edit-tel').value=p.tel||'';document.getElementById('edit-tel2').value=p.tel2||'';document.getElementById('edit-dir').value=p.dir||'';
+  document.getElementById('edit-name').value=p.name||'';document.getElementById('edit-emoji').value=p.emoji||'🐾';document.getElementById('edit-raza').value=p.raza||'';document.getElementById('edit-edad').value=p.edad||'';document.getElementById('edit-sexo').value=p.sexo||'Macho';document.getElementById('edit-cast').value=p.cast||'si';document.getElementById('edit-peso').value=p.peso||'';document.getElementById('edit-sangre').value=p.sangre||'';document.getElementById('edit-alergia').value=p.alergia||'';document.getElementById('edit-vet').value=p.vet||'';document.getElementById('edit-tel').value=p.tel||'';document.getElementById('edit-tel2').value=p.tel2||'';document.getElementById('edit-dir').value=p.dir||'';
   document.getElementById('edit-photo-prev').innerHTML=p.photo?'<img src="'+p.photo+'">':'🐾';
   show('s-edit');
 };
 window.showFicha=function(){renderFicha();show('s-ficha');};
 
 window.saveEdit=async function(){
+  var prev=document.getElementById('edit-photo-prev');
+  if(prev.style.opacity==='0.6'){showToast('⏳ Esperá que termine de subir la foto');return;}
   var btn=document.querySelector('#s-edit .btn-p');btn.textContent='Guardando...';btn.disabled=true;
-  currentPet=Object.assign({},currentPet,{name:document.getElementById('edit-name').value.trim()||currentPet.name,emoji:document.getElementById('edit-emoji').value.trim()||'🐾',photo:editPhotoTemp,raza:document.getElementById('edit-raza').value.trim(),edad:document.getElementById('edit-edad').value.trim(),sexo:document.getElementById('edit-sexo').value,cast:document.getElementById('edit-cast').value,peso:document.getElementById('edit-peso').value.trim(),sangre:document.getElementById('edit-sangre').value.trim(),alergia:document.getElementById('edit-alergia').value.trim()||'Ninguna',condiciones:document.getElementById('edit-condiciones').value.trim(),vet:document.getElementById('edit-vet').value.trim(),tel:document.getElementById('edit-tel').value.trim(),tel2:document.getElementById('edit-tel2').value.trim(),dir:document.getElementById('edit-dir').value.trim()});
+  currentPet=Object.assign({},currentPet,{name:document.getElementById('edit-name').value.trim()||currentPet.name,emoji:document.getElementById('edit-emoji').value.trim()||'🐾',photo:editPhotoTemp,raza:document.getElementById('edit-raza').value.trim(),edad:document.getElementById('edit-edad').value.trim(),sexo:document.getElementById('edit-sexo').value,cast:document.getElementById('edit-cast').value,peso:document.getElementById('edit-peso').value.trim(),sangre:document.getElementById('edit-sangre').value.trim(),alergia:document.getElementById('edit-alergia').value.trim()||'Ninguna',vet:document.getElementById('edit-vet').value.trim(),tel:document.getElementById('edit-tel').value.trim(),tel2:document.getElementById('edit-tel2').value.trim(),dir:document.getElementById('edit-dir').value.trim()});
   try{
     const ref=doc(db,'dijes',currentCode);const snap=await getDoc(ref);
     await setDoc(ref,Object.assign({},snap.data(),{pet:currentPet,updatedAt:new Date().toISOString()}));
