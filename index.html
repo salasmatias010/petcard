@@ -473,16 +473,6 @@ function showAuthModal(mode){
   document.body.appendChild(modal);
 }
 
-function doLogout(){
-  firebase.auth().signOut().then(function(){
-    _uid=null;_anon=true;_userEmail='';
-    S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
-    try{localStorage.removeItem('petcard4');}catch(e){}
-    updateAuthBar();render();
-    toast('Sesión cerrada');
-  }).catch(function(e){toast('Error: '+e.message);});
-}
-
 function doRegister(){
   var email=document.getElementById('auth-email').value.trim();
   var pass=document.getElementById('auth-pass').value;
