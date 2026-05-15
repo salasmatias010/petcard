@@ -126,6 +126,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
     <div class="ibtn" title="Notificaciones" onclick="requestNotifPerms()">🔔</div>
     <div class="ibtn" title="Exportar / Importar" onclick="openModal('m-data')">💾</div>
     <div id="save-icon" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--tx3)">☁️</div>
+    <div class="ibtn" title="Cerrar sesión" onclick="doLogout()" id="btn-logout" style="display:none">🚪</div>
   </div>
 </div>
 
@@ -396,7 +397,12 @@ function fbInit(callback){
       if(user){
         _uid=user.uid;
         _anon=user.isAnonymous;
+        _userEmail=user.email||'';
         updateAuthBar();
+        if(!user.isAnonymous){
+          var lb=document.getElementById('btn-logout');
+          if(lb)lb.style.display='flex';
+        }
         callback();
       } else {
         firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});
@@ -421,8 +427,24 @@ function updateAuthBar(){
       +'<span style="font-size:18px">✅</span>'
       +'<div style="font-size:13px;color:#085041">Datos guardados en la nube — <strong>'+(_userEmail||'cuenta vinculada')+'</strong></div>'
       +'</div>';
+    // Mostrar botón de cerrar sesión
+    var logoutBtn=document.getElementById('btn-logout');
+    if(logoutBtn)logoutBtn.style.display='flex';
     setTimeout(function(){var bar=document.getElementById('auth-bar');if(bar)bar.innerHTML='';},5000);
   }
+}
+
+function doLogout(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  firebase.auth().signOut().then(function(){
+    _uid=null;_anon=true;_userEmail='';
+    S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
+    try{localStorage.removeItem('petcard4');}catch(e){}
+    var logoutBtn=document.getElementById('btn-logout');
+    if(logoutBtn)logoutBtn.style.display='none';
+    updateAuthBar();render();
+    toast('Sesión cerrada');
+  }).catch(function(e){toast('Error: '+e.message);});
 }
 
 var _userEmail='';
