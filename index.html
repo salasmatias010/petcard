@@ -549,15 +549,21 @@ function loadFromFirebase(){
         var localData=null;
         try{var ls=localStorage.getItem('petcard4');if(ls)localData=JSON.parse(ls);}catch(e){}
         var localUpdated=localData&&localData.updatedAt||'';
-        if(localData&&localData.pets&&localData.pets.length&&localUpdated>=fbUpdated){
-          // Datos locales más nuevos — usar locales
-          S.pets=localData.pets;
-          S.pid=localData.pid||localData.pets[0].id;
-        } else {
-          // Firebase más nuevo — usar Firebase
+
+        // Contar datos en Firebase vs local
+        var fbTotal=data.pets.reduce(function(acc,p){return acc+(p.vaccines||[]).length+(p.history||[]).length+(p.reminders||[]).length;},0);
+        var localTotal=localData&&localData.pets?localData.pets.reduce(function(acc,p){return acc+(p.vaccines||[]).length+(p.history||[]).length+(p.reminders||[]).length;},0):0;
+
+        // Usar Firebase si tiene más datos O si local está vacío
+        var useFirebase=!localData||!localData.pets||!localData.pets.length||fbTotal>localTotal||(fbTotal===localTotal&&fbUpdated>localUpdated);
+
+        if(useFirebase){
           S.pets=data.pets;
           S.pid=data.pid||data.pets[0].id;
           try{localStorage.setItem('petcard4',JSON.stringify(Object.assign({},S,{updatedAt:fbUpdated})));}catch(e){}
+        } else {
+          S.pets=localData.pets;
+          S.pid=localData.pid||localData.pets[0].id;
         }
         checkActivar();render();
       } else {
