@@ -550,12 +550,13 @@ function loadFromFirebase(){
         try{var ls=localStorage.getItem('petcard4');if(ls)localData=JSON.parse(ls);}catch(e){}
         var localUpdated=localData&&localData.updatedAt||'';
 
+        // En dispositivo nuevo (sin localStorage) siempre usar Firebase
+        var isNewDevice=!localData||!localData.pets||!localData.pets.length;
         // Contar datos en Firebase vs local
         var fbTotal=data.pets.reduce(function(acc,p){return acc+(p.vaccines||[]).length+(p.history||[]).length+(p.reminders||[]).length;},0);
         var localTotal=localData&&localData.pets?localData.pets.reduce(function(acc,p){return acc+(p.vaccines||[]).length+(p.history||[]).length+(p.reminders||[]).length;},0):0;
-
-        // Usar Firebase si tiene más datos O si local está vacío
-        var useFirebase=!localData||!localData.pets||!localData.pets.length||fbTotal>localTotal||(fbTotal===localTotal&&fbUpdated>localUpdated);
+        // Usar Firebase si es dispositivo nuevo, tiene más datos, o es más reciente
+        var useFirebase=isNewDevice||fbTotal>localTotal||(fbTotal===localTotal&&fbUpdated>=localUpdated);
 
         if(useFirebase){
           S.pets=data.pets;
@@ -1256,12 +1257,20 @@ function verFoto(vaxId){
 }
 
 /* ── INIT ── */
-// Init con Firebase
 load(); // Load from localStorage first
+// Show loading spinner while waiting for Firebase
+var _fbLoaded=false;
 fbInit(function(){
+  _fbLoaded=true;
   loadFromFirebase(); // Then sync from Firebase
   checkScan();checkNotifBar();scheduleNotifs();
 });
+// Si Firebase tarda más de 3 segundos, renderizar con datos locales
+setTimeout(function(){
+  if(!_fbLoaded){
+    checkActivar();render();checkScan();checkNotifBar();scheduleNotifs();
+  }
+},3000);
 
 /* ── ACTIVAR DESDE DIJE ── */
 function checkActivar(){
