@@ -79,13 +79,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   </div>
   <div style="padding:24px">
     <div id="auth-tabs" style="display:flex;border-radius:12px;background:var(--surf2);padding:4px;margin-bottom:20px">
-      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--teal);color:#fff">Iniciar sesión</button>
-      <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--tx2)">Crear cuenta</button>
+      <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--teal);color:#fff">Crear cuenta</button>
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--tx2)">Iniciar sesión</button>
     </div>
     <div class="fg"><label>Email</label><input id="auth-email" type="email" placeholder="tu@email.com"></div>
     <div class="fg"><label>Contraseña</label><input id="auth-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
     <div id="auth-error" style="color:#A32D2D;font-size:13px;margin-bottom:12px;display:none"></div>
-    <button class="btn-p" id="auth-btn" onclick="doAuth()">Iniciar sesión</button>
+    <button class="btn-p" id="auth-btn" onclick="doAuth()">Crear cuenta</button>
   </div>
 </div>
 
@@ -443,7 +443,7 @@ function fmt(ds){if(!ds)return'';try{return new Date(ds+'T12:00:00').toLocaleDat
 function chipStatus(s){if(s==='ok')return'<span class="chip-ok">OK</span>';if(s==='warn')return'<span class="chip-warn">Vence pronto</span>';return'<span class="chip-late">Vencida</span>';}
 
 
-var _authMode = 'login';
+var _authMode = 'register';
 function switchAuthTab(mode){
   _authMode = mode;
   var btnLogin = document.getElementById('tab-login');
@@ -498,7 +498,7 @@ async function init(){
     const snap=await getDoc(doc(db,'dijes',currentCode));
     if(!snap.exists()){show('s-error');return;}
     const data=snap.data();
-    if(!data.activated){show('s-auth');}
+    if(!data.activated){switchAuthTab('register');show('s-auth');}
     else{
       currentPet=data.pet;
       isOwner=false; // reset siempre
