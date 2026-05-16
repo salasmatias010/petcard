@@ -109,7 +109,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
       </div>
       <div class="fg"><label>Raza</label><input id="act-raza" placeholder="Golden Retriever"></div>
       <div class="frow">
-        <div class="fg"><label>Edad</label><input id="act-edad" placeholder="3 años"></div>
+        <div class="fg"><label>Fecha de nacimiento</label><input id="act-nacimiento" type="date"></div>
         <div class="fg"><label>Sexo</label><select id="act-sexo"><option>Macho</option><option>Hembra</option></select></div>
       </div>
       <div class="fg"><label>Castrado/a</label><select id="act-cast"><option value="si">Sí</option><option value="no">No</option></select></div>
@@ -189,7 +189,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
       </div>
       <div class="fg"><label>Raza</label><input id="edit-raza"></div>
       <div class="frow">
-        <div class="fg"><label>Edad</label><input id="edit-edad"></div>
+        <div class="fg"><label>Fecha de nacimiento</label><input id="edit-nacimiento" type="date"></div>
         <div class="fg"><label>Sexo</label><select id="edit-sexo"><option>Macho</option><option>Hembra</option></select></div>
       </div>
       <div class="fg"><label>Castrado/a</label><select id="edit-cast"><option value="si">Sí</option><option value="no">No</option></select></div>
@@ -429,6 +429,22 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 var currentUser=null;
 
+
+function calcEdad(nacimiento){
+  if(!nacimiento)return '';
+  var hoy=new Date();
+  var nac=new Date(nacimiento);
+  var meses=(hoy.getFullYear()-nac.getFullYear())*12+(hoy.getMonth()-nac.getMonth());
+  if(hoy.getDate()<nac.getDate())meses--;
+  if(meses<0)return '';
+  if(meses===0)return 'Recién nacido';
+  if(meses<12){return meses===1?'1 mes':meses+' meses';}
+  var años=Math.floor(meses/12);
+  var resto=meses%12;
+  var txt=años===1?'1 año':años+' años';
+  if(resto>0)txt+=' y '+(resto===1?'1 mes':resto+' meses');
+  return txt;
+}
 var currentCode=null,currentPet=null,isOwner=false,editPhotoTemp=null,actPhotoTemp=null;
 const ADMIN='PC-ADMIN-2024';
 
@@ -557,7 +573,7 @@ window.activateDije=async function(){
   if(prev.style.opacity==='0.6'){showToast('⏳ Esperá que termine de subir la foto');return;}
   var btn=document.querySelector('#s-activate .btn-p');btn.textContent='Guardando...';btn.disabled=true;
   var ownerKey=currentUser?currentUser.uid:(Math.random().toString(36).slice(2)+Date.now().toString(36));
-  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),edad:document.getElementById('act-edad').value.trim(),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',condicion:document.getElementById('act-condicion').value.trim(),vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
+  var pet={name,emoji:document.getElementById('act-emoji').value.trim()||'🐾',photo:actPhotoTemp||null,raza:document.getElementById('act-raza').value.trim(),nacimiento:document.getElementById('act-nacimiento').value,edad:calcEdad(document.getElementById('act-nacimiento').value),sexo:document.getElementById('act-sexo').value,cast:document.getElementById('act-cast').value,peso:document.getElementById('act-peso').value.trim(),sangre:document.getElementById('act-sangre').value.trim(),alergia:document.getElementById('act-alergia').value.trim()||'Ninguna',condicion:document.getElementById('act-condicion').value.trim(),vet:document.getElementById('act-vet').value.trim(),tel,tel2:document.getElementById('act-tel2').value.trim(),dir:document.getElementById('act-dir').value.trim(),vaccines:[],history:[],reminders:[]};
   try{
     await setDoc(doc(db,'dijes',currentCode),{activated:true,ownerKey,pet,createdAt:new Date().toISOString()});
     localStorage.setItem('petcard_owner_'+currentCode,ownerKey);
@@ -582,7 +598,8 @@ function renderFicha(){
   var p=currentPet;
   document.getElementById('f-avatar').innerHTML=p.photo?'<img class="ficha-avatar" src="'+p.photo+'">':'<div class="ficha-emoji">'+p.emoji+'</div>';
   document.getElementById('f-name').textContent=p.name;
-  document.getElementById('f-sub').textContent=(p.raza||'')+(p.edad?' · '+p.edad:'')+(p.sexo?' · '+p.sexo:'');
+  var edadCalc=p.nacimiento?calcEdad(p.nacimiento):(p.edad||'');
+  document.getElementById('f-sub').textContent=(p.raza||'')+(edadCalc?' · '+edadCalc:'')+(p.sexo?' · '+p.sexo:'');
   document.getElementById('f-call').href='tel:'+p.tel;
   document.getElementById('f-tel-text').textContent=p.tel;
   // WhatsApp button — URL se actualiza con ubicación en notificarWhatsApp
@@ -610,7 +627,7 @@ function renderFicha(){
 
 window.showEdit=function(){
   var p=currentPet;editPhotoTemp=p.photo||null;
-  document.getElementById('edit-name').value=p.name||'';document.getElementById('edit-emoji').value=p.emoji||'🐾';document.getElementById('edit-raza').value=p.raza||'';document.getElementById('edit-edad').value=p.edad||'';document.getElementById('edit-sexo').value=p.sexo||'Macho';document.getElementById('edit-cast').value=p.cast||'si';document.getElementById('edit-peso').value=p.peso||'';document.getElementById('edit-sangre').value=p.sangre||'';document.getElementById('edit-alergia').value=p.alergia||'';document.getElementById('edit-condicion').value=p.condicion||'';document.getElementById('edit-vet').value=p.vet||'';document.getElementById('edit-tel').value=p.tel||'';document.getElementById('edit-tel2').value=p.tel2||'';document.getElementById('edit-dir').value=p.dir||'';
+  document.getElementById('edit-name').value=p.name||'';document.getElementById('edit-emoji').value=p.emoji||'🐾';document.getElementById('edit-raza').value=p.raza||'';document.getElementById('edit-nacimiento').value=p.nacimiento||'';document.getElementById('edit-sexo').value=p.sexo||'Macho';document.getElementById('edit-cast').value=p.cast||'si';document.getElementById('edit-peso').value=p.peso||'';document.getElementById('edit-sangre').value=p.sangre||'';document.getElementById('edit-alergia').value=p.alergia||'';document.getElementById('edit-condicion').value=p.condicion||'';document.getElementById('edit-vet').value=p.vet||'';document.getElementById('edit-tel').value=p.tel||'';document.getElementById('edit-tel2').value=p.tel2||'';document.getElementById('edit-dir').value=p.dir||'';
   document.getElementById('edit-photo-prev').innerHTML=p.photo?'<img src="'+p.photo+'">':'🐾';
   show('s-edit');
 };
@@ -620,7 +637,7 @@ window.saveEdit=async function(){
   var prev=document.getElementById('edit-photo-prev');
   if(prev.style.opacity==='0.6'){showToast('⏳ Esperá que termine de subir la foto');return;}
   var btn=document.querySelector('#s-edit .btn-p');btn.textContent='Guardando...';btn.disabled=true;
-  currentPet=Object.assign({},currentPet,{name:document.getElementById('edit-name').value.trim()||currentPet.name,emoji:document.getElementById('edit-emoji').value.trim()||'🐾',photo:editPhotoTemp,raza:document.getElementById('edit-raza').value.trim(),edad:document.getElementById('edit-edad').value.trim(),sexo:document.getElementById('edit-sexo').value,cast:document.getElementById('edit-cast').value,peso:document.getElementById('edit-peso').value.trim(),sangre:document.getElementById('edit-sangre').value.trim(),alergia:document.getElementById('edit-alergia').value.trim()||'Ninguna',condicion:document.getElementById('edit-condicion').value.trim(),vet:document.getElementById('edit-vet').value.trim(),tel:document.getElementById('edit-tel').value.trim(),tel2:document.getElementById('edit-tel2').value.trim(),dir:document.getElementById('edit-dir').value.trim()});
+  currentPet=Object.assign({},currentPet,{name:document.getElementById('edit-name').value.trim()||currentPet.name,emoji:document.getElementById('edit-emoji').value.trim()||'🐾',photo:editPhotoTemp,raza:document.getElementById('edit-raza').value.trim(),nacimiento:document.getElementById('edit-nacimiento').value,edad:calcEdad(document.getElementById('edit-nacimiento').value),sexo:document.getElementById('edit-sexo').value,cast:document.getElementById('edit-cast').value,peso:document.getElementById('edit-peso').value.trim(),sangre:document.getElementById('edit-sangre').value.trim(),alergia:document.getElementById('edit-alergia').value.trim()||'Ninguna',condicion:document.getElementById('edit-condicion').value.trim(),vet:document.getElementById('edit-vet').value.trim(),tel:document.getElementById('edit-tel').value.trim(),tel2:document.getElementById('edit-tel2').value.trim(),dir:document.getElementById('edit-dir').value.trim()});
   try{
     const ref=doc(db,'dijes',currentCode);const snap=await getDoc(ref);
     await setDoc(ref,Object.assign({},snap.data(),{pet:currentPet,updatedAt:new Date().toISOString()}));
