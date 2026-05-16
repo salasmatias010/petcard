@@ -175,7 +175,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   </div>
   <div class="fg"><label>Raza</label><input id="f-raza" placeholder="Golden Retriever"></div>
   <div class="frow">
-    <div class="fg"><label>Edad</label><input id="f-edad" placeholder="3 años"></div>
+    <div class="fg"><label>Fecha de nacimiento</label><input id="f-nacimiento" type="date"></div>
     <div class="fg"><label>Sexo</label><select id="f-sexo"><option>Macho</option><option>Hembra</option></select></div>
   </div>
   <div class="frow">
@@ -601,7 +601,7 @@ function rPerfil(p){
     :'<div class="avatar" onclick="document.getElementById(\'photo-file-hero\').click()" style="cursor:pointer"><span>'+p.emoji+'</span><div class="avatar-overlay">📷</div></div>';
   return'<div class="hero">'+avDiv
     +'<input type="file" id="photo-file-hero" accept="image/*" style="display:none" onchange="handlePhotoHero(event)">'
-    +'<div><div class="hname">'+p.name+'</div><div class="hsub">'+p.raza+' · '+p.edad+' · '+p.sexo+'</div></div></div>'
+    +'<div><div class="hname">'+p.name+'</div><div class="hsub">'+p.raza+' · '+(p.nacimiento?calcEdad(p.nacimiento):p.edad)+' · '+p.sexo+'</div></div></div>'
     +'<div class="badges">'+bgs+'</div>'
     +'<div class="card"><div class="ctitle">Datos básicos</div>'
     +'<div class="drow"><span class="dlbl">Peso</span><span class="dval">'+p.peso+'</span></div>'
@@ -805,6 +805,22 @@ function printCollar(mode){
 // ── Cloudinary ──────────────────────────────────────────────
 var CLOUDINARY_CLOUD='dfmkygkuj';
 var CLOUDINARY_PRESET='petcard_fotos';
+
+function calcEdad(nacimiento){
+  if(!nacimiento)return '';
+  var hoy=new Date();
+  var nac=new Date(nacimiento);
+  var meses=(hoy.getFullYear()-nac.getFullYear())*12+(hoy.getMonth()-nac.getMonth());
+  if(hoy.getDate()<nac.getDate())meses--;
+  if(meses<0)return '';
+  if(meses===0)return 'Recién nacido';
+  if(meses<12){return meses===1?'1 mes':meses+' meses';}
+  var años=Math.floor(meses/12);
+  var resto=meses%12;
+  var txt=años===1?'1 año':años+' años';
+  if(resto>0)txt+=' y '+(resto===1?'1 mes':resto+' meses');
+  return txt;
+}
 async function subirFotoCloudinary(file){
   var fd=new FormData();
   fd.append('file',file);
@@ -850,7 +866,7 @@ function ovlClose(e,id){if(e.target===document.getElementById(id))closeModal(id)
 function openAddPet(){
   S.editId=null;S.photoTemp=null;
   document.getElementById('m-addpet-h').textContent='Nueva mascota';
-  ['f-name','f-emoji','f-raza','f-edad','f-peso','f-sangre','f-vet','f-alergia','f-condicion','f-tel','f-dir'].forEach(function(i){document.getElementById(i).value='';}); 
+  ['f-name','f-emoji','f-raza','f-nacimiento','f-peso','f-sangre','f-vet','f-alergia','f-condicion','f-tel','f-dir'].forEach(function(i){document.getElementById(i).value='';}); 
   document.getElementById('f-sexo').value='Macho';
   document.getElementById('f-cast').value='si';
   document.getElementById('photo-prev').innerHTML='🐾';
@@ -864,7 +880,7 @@ function openEdit(){
   document.getElementById('f-name').value=p.name;
   document.getElementById('f-emoji').value=p.emoji;
   document.getElementById('f-raza').value=p.raza;
-  document.getElementById('f-edad').value=p.edad;
+  document.getElementById('f-nacimiento').value=p.nacimiento||'';
   document.getElementById('f-sexo').value=p.sexo;
   document.getElementById('f-peso').value=p.peso;
   document.getElementById('f-sangre').value=p.sangre;
@@ -879,7 +895,7 @@ function openEdit(){
   openModal('m-addpet');
 }
 function savePet(){
-  var d={name:document.getElementById('f-name').value.trim()||'Mascota',emoji:document.getElementById('f-emoji').value.trim()||'🐾',photo:S.photoTemp||null,raza:document.getElementById('f-raza').value.trim(),edad:document.getElementById('f-edad').value.trim(),sexo:document.getElementById('f-sexo').value,peso:document.getElementById('f-peso').value.trim(),sangre:document.getElementById('f-sangre').value.trim(),vet:document.getElementById('f-vet').value.trim(),alergia:document.getElementById('f-alergia').value.trim(),condicion:document.getElementById('f-condicion').value.trim(),tel:document.getElementById('f-tel').value.trim(),dir:document.getElementById('f-dir').value.trim(),cast:document.getElementById('f-cast').value};
+  var d={name:document.getElementById('f-name').value.trim()||'Mascota',emoji:document.getElementById('f-emoji').value.trim()||'🐾',photo:S.photoTemp||null,raza:document.getElementById('f-raza').value.trim(),nacimiento:document.getElementById('f-nacimiento').value,edad:calcEdad(document.getElementById('f-nacimiento').value),sexo:document.getElementById('f-sexo').value,peso:document.getElementById('f-peso').value.trim(),sangre:document.getElementById('f-sangre').value.trim(),vet:document.getElementById('f-vet').value.trim(),alergia:document.getElementById('f-alergia').value.trim(),condicion:document.getElementById('f-condicion').value.trim(),tel:document.getElementById('f-tel').value.trim(),dir:document.getElementById('f-dir').value.trim(),cast:document.getElementById('f-cast').value};
   if(S.editId){var p=S.pets.find(function(x){return x.id===S.editId;});if(p)Object.assign(p,d);}
   else{d.id=uid();d.vaccines=[];d.history=[];d.reminders=[];d.pesos=[];S.pets.push(d);S.pid=d.id;}
   save();closeModal('m-addpet');render();
