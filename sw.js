@@ -1,11 +1,9 @@
-const CACHE = 'petcard-v32';
+const CACHE = 'petcard-v33';
 const FILES = [
-  './index.html',
   './dije.html',
   './manifest.json'
 ];
 
-// Install: cache files
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(cache) {
@@ -15,7 +13,6 @@ self.addEventListener('install', function(e) {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
@@ -28,19 +25,31 @@ self.addEventListener('activate', function(e) {
   self.clients.claim();
 });
 
-// Fetch: network first, fallback to cache
 self.addEventListener('fetch', function(e) {
-  // Solo cachear requests GET
   if(e.request.method !== 'GET') return;
-  e.respondWith(
-    fetch(e.request).then(function(response) {
-      return caches.open(CACHE).then(function(cache) {
-        cache.put(e.request, response.clone());
+  
+  // index.html siempre desde la red
+  if(e.request.url.includes('index.html') || e.request.url.endsWith('mipetcard.com.ar/') || e.request.url.endsWith('mipetcard.com.ar')){
+    e.respondWith(
+      fetch(e.request).then(function(response){
+        var clone = response.clone();
+        caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
         return response;
-      });
-    }).catch(function() {
-      return caches.match(e.request).then(function(cached) {
-        return cached || caches.match('./index.html');
+      }).catch(function(){
+        return caches.match(e.request);
+      })
+    );
+    return;
+  }
+
+  // Todo lo demás: cache first
+  e.respondWith(
+    caches.match(e.request).then(function(cached){
+      if(cached) return cached;
+      return fetch(e.request).then(function(response){
+        var clone = response.clone();
+        caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
+        return response;
       });
     })
   );
