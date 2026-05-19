@@ -382,6 +382,12 @@ function fbInit(callback){
     var s=document.createElement('script');s.src=scripts[idx++];s.onload=loadNext;document.head.appendChild(s);
   }
   function initFB(){
+    // FCM
+    var _fcmMessaging = null;
+    try {
+      _fcmMessaging = firebase.messaging();
+    } catch(e) { console.log('FCM no soportado', e); }
+
     if(!firebase.apps.length){
       firebase.initializeApp({
         apiKey:"AIzaSyC_sERFBVgb9PMsGMtGiltcgycxoGqVZLg",
@@ -1029,11 +1035,33 @@ function installApp(){
 /* ── NOTIFICACIONES ── */
 function requestNotifPerms(){
   if(!('Notification' in window)){toast('Tu navegador no soporta notificaciones');return;}
-  if(Notification.permission==='granted'){scheduleNotifs();toast('✅ Notificaciones ya activadas');document.getElementById('notif-bar').style.display='none';return;}
+  if(Notification.permission==='granted'){
+    scheduleNotifs();
+    saveFcmToken();
+    toast('✅ Notificaciones ya activadas');
+    document.getElementById('notif-bar').style.display='none';
+    return;
+  }
   Notification.requestPermission().then(function(perm){
-    if(perm==='granted'){scheduleNotifs();toast('✅ Notificaciones activadas');document.getElementById('notif-bar').style.display='none';}
-    else toast('Notificaciones no permitidas');
+    if(perm==='granted'){
+      scheduleNotifs();
+      saveFcmToken();
+      toast('✅ Notificaciones activadas');
+      document.getElementById('notif-bar').style.display='none';
+    } else {
+      toast('Notificaciones no permitidas');
+    }
   });
+}
+
+function saveFcmToken(){
+  if(!_fcmMessaging||!_db||!_uid||_anon)return;
+  _fcmMessaging.getToken({vapidKey:'BN5y7SngpvSa0m5nJBfpjwKsnMSV21liH7ePB5gfL4kqSiXK_-qE1RQYFFN3COQHSxzG_Rh8TfFyvF6Rx-GbWsI'}).then(function(token){
+    if(token){
+      _db.collection('usuarios').doc(_uid).set({fcmToken:token},{merge:true});
+      console.log('FCM token guardado');
+    }
+  }).catch(function(e){console.log('FCM token error',e);});
 }
 function scheduleNotifs(){
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
