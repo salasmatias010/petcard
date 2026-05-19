@@ -629,9 +629,10 @@ function rHist(p){
     +'<button class="addbtn" onclick="openModal(\'m-hist\')">＋ Agregar entrada</button></div>';
 }
 function rRem(p){
-  var today=new Date();today.setHours(0,0,0,0);
+  var now=new Date();
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   var items=(p.reminders||[]).slice().sort(function(a,b){return(a.d||'').localeCompare(b.d||'');}).map(function(r){
-    var d=r.d?new Date(r.d+'T12:00:00'):null,diff=d?Math.round((d-today)/864e5):null;
+    var d=r.d?new Date(r.d+'T00:00:00'):null,diff=d?Math.round((d-today)/864e5):null;
     var col='#185FA5',lbl='';
     if(diff!==null){if(diff<0){col='#A32D2D';lbl='Vencido';}else if(diff===0){col='#BA7517';lbl='Hoy';}else if(diff<=30){col='#BA7517';lbl='en '+diff+' días';}else{col='#1D9E75';lbl='en '+Math.round(diff/30)+' meses';}}
     return'<div class="ritem"><div class="rdot" style="background:'+col+'"></div>'
@@ -1036,13 +1037,16 @@ function requestNotifPerms(){
 }
 function scheduleNotifs(){
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
-  var today=new Date();today.setHours(0,0,0,0);
+  var now=new Date();
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   S.pets.forEach(function(p){
     (p.reminders||[]).forEach(function(r){
       if(!r.d)return;
-      var d=new Date(r.d+'T12:00:00');
+      var d=new Date(r.d+'T00:00:00');
       var diff=Math.round((d-today)/864e5);
-      if(diff===0){
+      if(diff<0){
+        new Notification('PetCard · '+p.name,{body:'⚠️ Vencido: '+r.t+(r.o?' — '+r.o:''),icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚠️</text></svg>'});
+      } else if(diff===0){
         new Notification('PetCard · '+p.name,{body:'Hoy: '+r.t+(r.o?' — '+r.o:''),icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🐾</text></svg>'});
       } else if(diff===1){
         new Notification('PetCard · '+p.name,{body:'Mañana: '+r.t+(r.o?' — '+r.o:''),icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔔</text></svg>'});
