@@ -1037,21 +1037,17 @@ function installApp(){
 function showFcmDebug(){
   var el=document.getElementById('fcm-debug');
   if(!el)return;
-  var info='Firebase: '+(typeof firebase)+'
-';
-  info+='messaging fn: '+(typeof firebase.messaging)+'
-';
-  info+='_fcmMessaging: '+(_fcmMessaging?'OK':'null')+'
-';
-  info+='Notification: '+(typeof Notification)+'
-';
-  info+='Permission: '+(typeof Notification!=='undefined'?Notification.permission:'N/A')+'
-';
-  info+='UID: '+(_uid||'null')+'
-';
-  info+='Anon: '+_anon;
+  var lines=[
+    'Firebase: '+(typeof firebase),
+    'messaging fn: '+(typeof firebase.messaging),
+    '_fcmMessaging: '+(_fcmMessaging?'OK':'null'),
+    'Notification: '+(typeof Notification),
+    'Permission: '+(typeof Notification!=='undefined'?Notification.permission:'N/A'),
+    'UID: '+(_uid||'null'),
+    'Anon: '+_anon
+  ];
   el.style.display='block';
-  el.textContent=info;
+  el.innerHTML=lines.join('<br>');
 }
 function requestNotifPerms(){
   showFcmDebug();
