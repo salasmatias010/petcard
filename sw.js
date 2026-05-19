@@ -1,4 +1,4 @@
-const CACHE = 'petcard-v26';
+const CACHE = 'petcard-v27';
 const FILES = [
   './index.html',
   './dije.html',
@@ -30,6 +30,8 @@ self.addEventListener('activate', function(e) {
 
 // Fetch: network first, fallback to cache
 self.addEventListener('fetch', function(e) {
+  // Solo cachear requests GET
+  if(e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(function(response) {
       return caches.open(CACHE).then(function(cache) {
