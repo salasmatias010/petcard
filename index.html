@@ -415,6 +415,10 @@ function fbInit(callback){
 }
 
 function updateAuthBar(){
+  // Auto-save FCM token when logged in
+  if(!_anon && Notification && Notification.permission==='granted'){
+    saveFcmToken();
+  }
   var bar=document.getElementById('auth-bar');
   var sbtn=document.getElementById('session-btn');
   if(_anon){
