@@ -1,4 +1,4 @@
-const CACHE = 'petcard-v34';
+const CACHE = 'petcard-v35';
 const FILES = [
   './dije.html',
   './manifest.json'
