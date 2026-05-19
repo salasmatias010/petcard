@@ -382,11 +382,6 @@ function fbInit(callback){
     var s=document.createElement('script');s.src=scripts[idx++];s.onload=loadNext;document.head.appendChild(s);
   }
   function initFB(){
-    // FCM
-    try {
-      _fcmMessaging = firebase.messaging();
-    } catch(e) { console.log('FCM no soportado', e); }
-
     if(!firebase.apps.length){
       firebase.initializeApp({
         apiKey:"AIzaSyC_sERFBVgb9PMsGMtGiltcgycxoGqVZLg",
@@ -397,6 +392,11 @@ function fbInit(callback){
         appId:"1:720369332644:web:f71bd826ab4d3412211131"
       });
     }
+    // FCM — debe ir después de initializeApp
+    try {
+      _fcmMessaging = firebase.messaging();
+      console.log('FCM inicializado OK');
+    } catch(e) { console.log('FCM no soportado', e); }
     _db=firebase.firestore();
     firebase.auth().onAuthStateChanged(function(user){
       if(user){
