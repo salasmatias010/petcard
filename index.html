@@ -123,7 +123,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 <div class="topbar">
   <div class="brand">Pet<span>Card</span></div>
   <div class="topbtns">
-    <div class="ibtn" id="notif-btn" title="Notificaciones" onclick="requestNotifPerms()">🔔</div>
+    <div id="notif-btn" title="Notificaciones" onclick="requestNotifPerms()" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;gap:1px"><div class="ibtn" style="pointer-events:none">🔔</div><span id="notif-label" style="font-size:9px;font-weight:700;color:var(--tx3)">OFF</span></div>
     <div class="ibtn" title="Exportar / Importar" onclick="openModal('m-data')">💾</div>
     <div id="session-btn" onclick="onSessionBtn()" style="padding:5px 11px;border-radius:20px;border:1px solid var(--bor2);font-size:12px;font-weight:600;cursor:pointer;color:var(--tx2);background:var(--surf);white-space:nowrap;align-self:center">...</div>
   </div>
@@ -1085,11 +1085,14 @@ function scheduleNotifs(){
   });
 }
 function updateNotifBtn(){
-  var btn=document.getElementById('notif-btn');
-  if(!btn)return;
-  if(!('Notification' in window)){btn.textContent='🔕';return;}
-  if(Notification.permission==='granted'){btn.textContent='🔔';}
-  else{btn.textContent='🔕';}
+  var lbl=document.getElementById('notif-label');
+  if(!lbl)return;
+  if(!('Notification' in window)){lbl.textContent='OFF';lbl.style.color='var(--tx3)';return;}
+  if(Notification.permission==='granted'){
+    lbl.textContent='ON';lbl.style.color='var(--teal)';
+  } else {
+    lbl.textContent='OFF';lbl.style.color='var(--tx3)';
+  }
 }
 function checkNotifBar(){
   if(!('Notification' in window))return;
