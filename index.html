@@ -130,6 +130,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 </div>
 
 <div id="auth-bar"></div>
+<div id="fcm-debug" style="display:none;background:#f0ede8;padding:10px 20px;font-size:12px;font-family:monospace;word-break:break-all;max-width:480px;margin:8px auto;border-radius:8px"></div>
 <div id="notif-bar" style="display:none" class="notif-bar">
   <span>🔔</span><span id="notif-msg">Activá notificaciones para recordatorios</span>
   <button onclick="requestNotifPerms()">Activar</button>
@@ -1033,7 +1034,27 @@ function installApp(){
 }
 
 /* ── NOTIFICACIONES ── */
+function showFcmDebug(){
+  var el=document.getElementById('fcm-debug');
+  if(!el)return;
+  var info='Firebase: '+(typeof firebase)+'
+';
+  info+='messaging fn: '+(typeof firebase.messaging)+'
+';
+  info+='_fcmMessaging: '+(_fcmMessaging?'OK':'null')+'
+';
+  info+='Notification: '+(typeof Notification)+'
+';
+  info+='Permission: '+(typeof Notification!=='undefined'?Notification.permission:'N/A')+'
+';
+  info+='UID: '+(_uid||'null')+'
+';
+  info+='Anon: '+_anon;
+  el.style.display='block';
+  el.textContent=info;
+}
 function requestNotifPerms(){
+  showFcmDebug();
   if(!('Notification' in window)){toast('Tu navegador no soporta notificaciones');return;}
   if(Notification.permission==='granted'){
     scheduleNotifs();
