@@ -552,8 +552,8 @@ function loadFromFirebase(){
         // Sync to localStorage
         try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
         checkActivar();
-        render();
       }
+      render();
     } else {
       // New user — no data yet
       checkActivar();
