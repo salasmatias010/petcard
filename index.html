@@ -107,6 +107,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 /* notif banner */
 .notif-bar{background:var(--amber-bg);border:1px solid rgba(186,117,23,.3);border-radius:var(--rs);padding:10px 14px;margin:12px 20px 0;max-width:480px;margin-left:auto;margin-right:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--amber-tx)}
 .notif-bar button{margin-left:auto;padding:5px 12px;background:var(--amber-tx);color:#fff;border:none;border-radius:var(--rs);font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+/* loading spinner */
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--bor2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:var(--tx3)}
 /* profile viewer */
 #vp{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;padding-bottom:40px}
 #vp.open{display:block}
@@ -141,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 </div>
 
 <div class="pet-sel" id="pet-sel"></div>
-<div class="content" id="content"></div>
+<div class="content" id="content"><div class="loading-screen"><div class="spinner"></div><div class="loading-txt">Cargando...</div></div></div>
 
 <div class="bnav">
   <div class="nitem act" id="n-perfil" onclick="setNav('perfil')"><div class="nicon">🐾</div><span>Perfil</span></div>
@@ -1299,7 +1304,7 @@ function verFoto(vaxId){
 // Init con Firebase
 // Data loads after auth state is known (see onAuthStateChanged)
 fbInit(function(){
-  if(!_anon) load(); // Only load local data if logged in
+  if(!_anon) load();
   loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
   render();
