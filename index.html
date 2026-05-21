@@ -130,7 +130,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 </div>
 
 <div id="auth-bar"></div>
-<div id="fcm-debug" style="display:none;background:#f0ede8;padding:10px 20px;font-size:12px;font-family:monospace;word-break:break-all;max-width:480px;margin:8px auto;border-radius:8px"></div>
 <div id="notif-bar" style="display:none" class="notif-bar">
   <span>🔔</span><span id="notif-msg">Activá notificaciones para recordatorios</span>
   <button onclick="requestNotifPerms()">Activar</button>
@@ -381,7 +380,7 @@ function fbInit(callback){
   var idx=0;
   function loadNext(){
     if(idx>=scripts.length){initFB();return;}
-    var s=document.createElement('script');s.src=scripts[idx++];s.onload=loadNext;document.head.appendChild(s);
+    var s=document.createElement("script");s.src=scripts[idx++];s.onload=loadNext;s.onerror=function(){console.log("Firebase script no disponible — modo offline");load();checkActivar();checkNotifBar();scheduleNotifs();render();};document.head.appendChild(s);
   }
   function initFB(){
     if(!firebase.apps.length){
@@ -1038,23 +1037,7 @@ function installApp(){
 }
 
 /* ── NOTIFICACIONES ── */
-function showFcmDebug(){
-  var el=document.getElementById('fcm-debug');
-  if(!el)return;
-  var lines=[
-    'Firebase: '+(typeof firebase),
-    'messaging fn: '+(typeof firebase.messaging),
-    '_fcmMessaging: '+(_fcmMessaging?'OK':'null'),
-    'Notification: '+(typeof Notification),
-    'Permission: '+(typeof Notification!=='undefined'?Notification.permission:'N/A'),
-    'UID: '+(_uid||'null'),
-    'Anon: '+_anon
-  ];
-  el.style.display='block';
-  el.innerHTML=lines.join('<br>');
-}
 function requestNotifPerms(){
-  showFcmDebug();
   if(!('Notification' in window)){toast('Tu navegador no soporta notificaciones');return;}
   if(Notification.permission==='granted'){
     scheduleNotifs();
