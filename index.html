@@ -539,6 +539,7 @@ function load(){
   // Load from localStorage first (fast)
   try{var d=localStorage.getItem('petcard4');if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
   if(!S.pid&&S.pets&&S.pets.length)S.pid=S.pets[0].id;
+  S.nav='perfil'; // siempre arrancar en perfil
 }
 
 function loadFromFirebase(){
@@ -1073,7 +1074,7 @@ function saveFcmToken(){
     }
   }).catch(function(e){console.log('FCM token error',e);});
 }
-function scheduleNotifs(){
+function fireNotifs(){
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
   var now=new Date();
   var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -1093,6 +1094,18 @@ function scheduleNotifs(){
       }
     });
   });
+}
+function scheduleNotifs(){
+  if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
+  if(window._notifTimer)clearTimeout(window._notifTimer);
+  var now=new Date();
+  var next=new Date(now.getFullYear(),now.getMonth(),now.getDate(),9,0,0,0);
+  if(now>=next) next.setDate(next.getDate()+1); // ya pasaron las 9am, programar para mañana
+  var ms=next-now;
+  window._notifTimer=setTimeout(function(){
+    fireNotifs();
+    scheduleNotifs(); // reprogramar para el día siguiente
+  },ms);
 }
 function updateNotifBtn(){
   var btn=document.getElementById('notif-btn');
