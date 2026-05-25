@@ -554,16 +554,15 @@ function loadFromFirebase(){
         try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
         checkActivar();
       }
-      render();
+      _fbReady=true;render();
     } else {
       // New user — no data yet
       checkActivar();
-      render();
+      _fbReady=true;render();
     }
   }).catch(function(e){
     console.log('Load error',e);
-    checkActivar();
-    render();
+    _fbReady=true;render();
   });
 }
 
@@ -1323,7 +1322,6 @@ fbInit(function(){
   if(!_anon) load();
   loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
-  _fbReady=true;
   render();
   // Regenerar token FCM siempre al abrir la app
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
