@@ -406,10 +406,17 @@ function fbInit(callback){
     _db=firebase.firestore();
     firebase.auth().onAuthStateChanged(function(user){
       if(user){
+        var prevUid=_uid;
         _uid=user.uid;
         _anon=user.isAnonymous;
         updateAuthBar();
-        callback();
+        if(!prevUid){
+          callback(); // primera vez
+        } else if(prevUid!==_uid){
+          // usuario cambió (ej: inició sesión con Google)
+          if(!_anon) load();
+          loadFromFirebase();
+        }
       } else {
         firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});
       }
