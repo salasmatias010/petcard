@@ -1068,8 +1068,20 @@ function saveFcmToken(){
   if(!_fcmMessaging||!_db||!_uid||_anon)return;
   _fcmMessaging.getToken({vapidKey:'BN5y7SngpvSa0m5nJBfpjwKsnMSV21liH7ePB5gfL4kqSiXK_-qE1RQYFFN3COQHSxzG_Rh8TfFyvF6Rx-GbWsI'}).then(function(token){
     if(token){
-      _db.collection('usuarios').doc(_uid).set({fcmToken:token},{merge:true});
-      console.log('FCM token guardado');
+      // Guardar array de tokens para soportar múltiples dispositivos
+      _db.collection('usuarios').doc(_uid).get().then(function(doc){
+        var tokens=[];
+        if(doc.exists && doc.data().fcmTokens){
+          tokens=doc.data().fcmTokens;
+        } else if(doc.exists && doc.data().fcmToken){
+          tokens=[doc.data().fcmToken]; // migrar token viejo
+        }
+        if(tokens.indexOf(token)===-1) tokens.push(token);
+        // Máximo 10 tokens
+        if(tokens.length>10) tokens=tokens.slice(-10);
+        _db.collection('usuarios').doc(_uid).set({fcmTokens:tokens, fcmToken:token},{merge:true});
+        console.log('FCM tokens guardados:',tokens.length);
+      });
     }
   }).catch(function(e){console.log('FCM token error',e);});
 }
