@@ -406,17 +406,10 @@ function fbInit(callback){
     _db=firebase.firestore();
     firebase.auth().onAuthStateChanged(function(user){
       if(user){
-        var prevUid=_uid;
         _uid=user.uid;
         _anon=user.isAnonymous;
         updateAuthBar();
-        if(!prevUid){
-          callback(); // primera vez
-        } else if(prevUid!==_uid){
-          // usuario cambió (ej: inició sesión con Google)
-          if(!_anon) load();
-          loadFromFirebase();
-        }
+        callback();
       } else {
         firebase.auth().signInAnonymously().catch(function(e){console.log('Auth error',e);callback();});
       }
@@ -600,7 +593,7 @@ function chipStatus(s){
   return'<span class="clate">Vencida</span>';}
 function renderMain(){
   var el=document.getElementById('content'),p=apet();
-  if(!p){el.innerHTML='<div class="empty">No hay mascotas.</div>';return;}
+  if(!p){el.innerHTML='<div class="empty">No hay mascotas. ¡Agregá una!</div>';return;}
   if(S.nav==='perfil')el.innerHTML=rPerfil(p);
   else if(S.nav==='historial')el.innerHTML=rHist(p);
   else if(S.nav==='recordatorios')el.innerHTML=rRem(p);
@@ -1323,12 +1316,13 @@ function verFoto(vaxId){
 // Data loads after auth state is known (see onAuthStateChanged)
 fbInit(function(){
   if(!_anon) load();
+  loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
+  render();
   // Regenerar token FCM siempre al abrir la app
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
     saveFcmToken();
   }
-  loadFromFirebase(); // render() se llama dentro de loadFromFirebase
 });
 
 /* ── ACTIVAR DESDE DIJE ── */
