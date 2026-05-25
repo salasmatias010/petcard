@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 </div>
 
 <div class="pet-sel" id="pet-sel"></div>
-<div class="content" id="content"></div>
+<div class="content" id="content"><div class="loading-screen"><div class="spinner"></div><div class="loading-txt">Cargando...</div></div></div>
 
 <div class="bnav">
   <div class="nitem act" id="n-perfil" onclick="setNav('perfil')"><div class="nicon">🐾</div><span>Perfil</span></div>
@@ -527,7 +527,7 @@ function save(){
     _saving=true;
         _db.collection('usuarios').doc(_uid).set({
       pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
-    },{merge:true}).then(function(){
+    }).then(function(){
       _saving=false;
     }).catch(function(e){
       console.log('Save error',e);
@@ -562,6 +562,7 @@ function loadFromFirebase(){
     }
   }).catch(function(e){
     console.log('Load error',e);
+    checkActivar();
     render();
   });
 }
@@ -1065,12 +1066,15 @@ function requestNotifPerms(){
 
 function saveFcmToken(){
   if(!_fcmMessaging||!_db||!_uid||_anon)return;
-  _fcmMessaging.getToken({vapidKey:'BN5y7SngpvSa0m5nJBfpjwKsnMSV21liH7ePB5gfL4kqSiXK_-qE1RQYFFN3COQHSxzG_Rh8TfFyvF6Rx-GbWsI'}).then(function(token){
-    if(token){
-      _db.collection('usuarios').doc(_uid).set({fcmToken:token},{merge:true});
-      console.log('FCM token guardado');
-    }
-  }).catch(function(e){console.log('FCM token error',e);});
+  // Forzar token nuevo eliminando el anterior primero
+  _fcmMessaging.deleteToken().catch(function(){}).finally(function(){
+    _fcmMessaging.getToken({vapidKey:'BN5y7SngpvSa0m5nJBfpjwKsnMSV21liH7ePB5gfL4kqSiXK_-qE1RQYFFN3COQHSxzG_Rh8TfFyvF6Rx-GbWsI'}).then(function(token){
+      if(token){
+        _db.collection('usuarios').doc(_uid).set({fcmToken:token},{merge:true});
+        console.log('FCM token guardado:', token.substring(0,20)+'...');
+      }
+    }).catch(function(e){console.log('FCM token error',e);});
+  });
 }
 function fireNotifs(){
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
