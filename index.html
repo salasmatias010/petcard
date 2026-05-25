@@ -374,7 +374,7 @@ var S={pets:[],pid:null,editId:null,nav:'perfil',photoTemp:null};
 function uid(){return Math.random().toString(36).slice(2,10);}
 function apet(){return S.pets.find(function(p){return p.id===S.pid;});}
 /* ── FIREBASE ── */
-var _db=null, _uid=null, _saving=false, _anon=true, _fcmMessaging=null;
+var _db=null, _uid=null, _saving=false, _anon=true, _fcmMessaging=null, _fbReady=false;
 
 function fbInit(callback){
   if(_db){callback();return;}
@@ -594,7 +594,11 @@ function chipStatus(s){
   return'<span class="clate">Vencida</span>';}
 function renderMain(){
   var el=document.getElementById('content'),p=apet();
-  if(!p){el.innerHTML='<div class="empty">Escaneá el QR de tu dije PetCard para agregar tu mascota.</div>';return;}
+  if(!p){
+    if(!_fbReady){el.innerHTML='<div class="loading-screen"><div class="spinner"></div><div class="loading-txt">Cargando...</div></div>';}
+    else{el.innerHTML='<div class="empty">Escaneá el QR de tu dije PetCard para agregar tu mascota.</div>';}
+    return;
+  }
   if(S.nav==='perfil')el.innerHTML=rPerfil(p);
   else if(S.nav==='historial')el.innerHTML=rHist(p);
   else if(S.nav==='recordatorios')el.innerHTML=rRem(p);
@@ -1319,6 +1323,7 @@ fbInit(function(){
   if(!_anon) load();
   loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
+  _fbReady=true;
   render();
   // Regenerar token FCM siempre al abrir la app
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
