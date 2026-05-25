@@ -1316,13 +1316,12 @@ function verFoto(vaxId){
 // Data loads after auth state is known (see onAuthStateChanged)
 fbInit(function(){
   if(!_anon) load();
-  loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
-  render();
   // Regenerar token FCM siempre al abrir la app
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
     saveFcmToken();
   }
+  loadFromFirebase(); // render() se llama dentro de loadFromFirebase
 });
 
 /* ── ACTIVAR DESDE DIJE ── */
