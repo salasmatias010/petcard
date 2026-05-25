@@ -1321,6 +1321,10 @@ fbInit(function(){
   loadFromFirebase();
   checkScan();checkNotifBar();scheduleNotifs();
   render();
+  // Regenerar token FCM siempre al abrir la app
+  if(typeof Notification!=='undefined' && Notification.permission==='granted'){
+    saveFcmToken();
+  }
 });
 
 /* ── ACTIVAR DESDE DIJE ── */
