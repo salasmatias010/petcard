@@ -527,7 +527,7 @@ function save(){
     _saving=true;
         _db.collection('usuarios').doc(_uid).set({
       pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
-    }).then(function(){
+    },{merge:true}).then(function(){
       _saving=false;
     }).catch(function(e){
       console.log('Save error',e);
