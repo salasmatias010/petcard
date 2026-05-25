@@ -6,9 +6,20 @@ firebase.initializeApp({
   projectId: "mipetcard",
   storageBucket: "mipetcard.firebasestorage.app",
   messagingSenderId: "720369332644",
-  appId: "1:720369332644:web:f71bd826ab4d3412211131"
+  appId: "1:720369832644:web:f71bd826ab4d3412211131"
 });
 const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(function(payload) {
+  const title = payload.notification.title || 'PetCard';
+  const body = payload.notification.body || '';
+  return self.registration.showNotification(title, {
+    body: body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: 'https://mipetcard.com.ar' }
+  });
+});
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
