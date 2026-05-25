@@ -586,8 +586,7 @@ function renderSel(){
     c.onclick=function(){S.pid=p.id;render();};
     el.appendChild(c);
   });
-  var a=document.createElement('div');a.className='pchip-add';a.innerHTML='＋ Agregar mascota';
-  a.onclick=openAddPet;el.appendChild(a);
+
 }
 function chipStatus(s){
   if(s==='ok')return'<span class="cok">OK</span>';
@@ -595,7 +594,7 @@ function chipStatus(s){
   return'<span class="clate">Vencida</span>';}
 function renderMain(){
   var el=document.getElementById('content'),p=apet();
-  if(!p){el.innerHTML='<div class="empty">No hay mascotas. ¡Agregá una!</div>';return;}
+  if(!p){el.innerHTML='<div class="empty">Escaneá el QR de tu dije PetCard para agregar tu mascota.</div>';return;}
   if(S.nav==='perfil')el.innerHTML=rPerfil(p);
   else if(S.nav==='historial')el.innerHTML=rHist(p);
   else if(S.nav==='recordatorios')el.innerHTML=rRem(p);
