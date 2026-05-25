@@ -54,26 +54,3 @@ self.addEventListener('fetch', function(e) {
     })
   );
 });
-
-// Mostrar notificación push
-self.addEventListener('push', function(e) {
-  var data = e.data ? e.data.json() : {};
-  var title = (data.notification && data.notification.title) || 'PetCard';
-  var body = (data.notification && data.notification.body) || '';
-  var link = (data.fcmOptions && data.fcmOptions.link) || 'https://mipetcard.com.ar';
-  e.waitUntil(
-    self.registration.showNotification(title, {
-      body: body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      data: { link: link }
-    })
-  );
-});
-
-// Abrir la app al tocar la notificación
-self.addEventListener('notificationclick', function(e) {
-  e.notification.close();
-  var link = (e.notification.data && e.notification.data.link) || 'https://mipetcard.com.ar';
-  e.waitUntil(clients.openWindow(link));
-});
