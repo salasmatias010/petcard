@@ -10,17 +10,6 @@ firebase.initializeApp({
 });
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage(function(payload) {
-  const title = payload.notification.title || 'PetCard';
-  const body = payload.notification.body || '';
-  return self.registration.showNotification(title, {
-    body: body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    data: { url: 'https://mipetcard.com.ar' }
-  });
-});
-
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(clients.openWindow('https://mipetcard.com.ar'));
