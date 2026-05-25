@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 </div>
 
 <div class="pet-sel" id="pet-sel"></div>
-<div class="content" id="content"><div class="loading-screen"><div class="spinner"></div><div class="loading-txt">Cargando...</div></div></div>
+<div class="content" id="content"></div>
 
 <div class="bnav">
   <div class="nitem act" id="n-perfil" onclick="setNav('perfil')"><div class="nicon">🐾</div><span>Perfil</span></div>
@@ -593,7 +593,7 @@ function chipStatus(s){
   return'<span class="clate">Vencida</span>';}
 function renderMain(){
   var el=document.getElementById('content'),p=apet();
-  if(!p){el.innerHTML='<div class="loading-screen"><div class="spinner"></div><div class="loading-txt">Cargando...</div></div>';return;}
+  if(!p){el.innerHTML='<div class="empty">No hay mascotas.</div>';return;}
   if(S.nav==='perfil')el.innerHTML=rPerfil(p);
   else if(S.nav==='historial')el.innerHTML=rHist(p);
   else if(S.nav==='recordatorios')el.innerHTML=rRem(p);
