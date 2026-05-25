@@ -1,4 +1,4 @@
-const CACHE = 'petcard-v37';
+const CACHE = 'petcard-v38';
 const FILES = [
   './dije.html',
   './manifest.json'
@@ -53,4 +53,9 @@ self.addEventListener('fetch', function(e) {
       });
     })
   );
+});
+
+// Suprimir notificación del SW principal — la maneja firebase-messaging-sw.js
+self.addEventListener('push', function(e) {
+  // No hacer nada, Firebase Messaging SW se encarga
 });
