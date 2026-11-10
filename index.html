@@ -177,7 +177,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   </div>
   <canvas id="scan-canvas" style="display:none"></canvas>
   <div class="fg"><label>¿No podés escanear? Escribí el código del dije</label>
-    <div style="display:flex;gap:8px"><input id="scan-code" placeholder="Ej: AB12CD" autocapitalize="characters" style="text-transform:uppercase"><button class="btn-p" style="flex:none" onclick="goDijeCode(document.getElementById('scan-code').value)">Ir</button></div>
+    <div style="display:flex;gap:8px"><input id="scan-code" placeholder="Ej: PC-0001" autocapitalize="characters" style="text-transform:uppercase"><button class="btn-p" style="flex:none" onclick="goDijeCode(document.getElementById('scan-code').value)">Ir</button></div>
   </div>
   <div style="text-align:center;margin:4px 0 12px"><a href="#" onclick="closeScan();openAddPet();return false" style="font-size:12px;color:var(--tx3)">Agregar sin dije (carga manual)</a></div>
   <div class="mbtns"><button class="btn-s" onclick="closeScan()">Cancelar</button></div>
@@ -440,7 +440,7 @@ function fbInit(callback){
 
 function updateAuthBar(){
   // Auto-save FCM token when logged in
-  if(!_anon && Notification && Notification.permission==='granted'){
+  if(!_anon && typeof Notification!=='undefined' && Notification.permission==='granted'){
     saveFcmToken();
   }
   var bar=document.getElementById('auth-bar');
@@ -1201,6 +1201,21 @@ function toast(msg){
 }
 
 /* ── QR SCAN ── */
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeImg(u){return(typeof u==='string'&&/^(https:\/\/|data:image\/)/i.test(u))?esc(u):null;}
+function sanitizePet(p){
+  var o={};
+  Object.keys(p).forEach(function(k){
+    var v=p[k];
+    if(k==='rawName'||k==='vaccines'||k==='history'||k==='reminders')o[k]=v;
+    else if(k==='photo')o[k]=safeImg(v);
+    else o[k]=esc(v);
+  });
+  ['vaccines','history','reminders'].forEach(function(k){
+    o[k]=(p[k]||[]).map(function(x){var r={};Object.keys(x).forEach(function(j){r[j]=esc(x[j]);});return r;});
+  });
+  return o;
+}
 function checkScan(){
   var p=new URLSearchParams(location.search).get('pet');if(!p)return;
   try{
@@ -1209,11 +1224,12 @@ function checkScan(){
       vaccines:(raw.vaccines||raw.vx||[]).map(function(x){return{n:x.name||x.n,d:x.date||x.d,s:x.status||x.s};}),
       history:(raw.history||raw.hi||[]).map(function(x){return{t:x.title||x.t,d:x.date||x.d,o:x.notes||x.o};}),
       reminders:(raw.reminders||raw.rm||[]).map(function(x){return{t:x.title||x.t,d:x.date||x.d,o:x.notes||x.o};})};
-    showProfile(pet);
+    pet.rawName=pet.name;
+    showProfile(sanitizePet(pet));
   }catch(e){console.log('QR err',e);}
 }
 function showProfile(p){
-  document.getElementById('vp-title').textContent='Ficha de '+p.name;
+  document.getElementById('vp-title').textContent='Ficha de '+(p.rawName||p.name);
   var vaxH=(p.vaccines||[]).map(function(v){return'<div class="vrow"><div><div class="vn">'+v.n+'</div><div class="vd">'+fmt(v.d)+'</div></div>'+chipStatus(v.s)+'</div>';}).join('');
   var avatarEl=p.photo
     ?'<img src="'+p.photo+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid #E1F5EE">'
@@ -1366,12 +1382,19 @@ fbInit(function(){
 var _scanStream=null,_scanOn=false,_scanDet=null;
 function parseDijeCode(txt){
   txt=(txt||'').trim();if(!txt)return null;
-  try{var u=new URL(txt);var c=u.searchParams.get('code');if(c)return c.toUpperCase();return null;}catch(e){}
-  return /^[A-Za-z0-9\-_]{3,40}$/.test(txt)?txt.toUpperCase():null;
+  try{var u=new URL(txt);var c=u.searchParams.get('code');
+    if(c&&/dije\.html$/i.test(u.pathname)&&/^[A-Za-z0-9]{1,10}-\d{1,8}$/.test(c))return c.toUpperCase();
+    return null;}catch(e){}
+  return /^[A-Za-z0-9]{1,10}-\d{1,8}$/.test(txt)?txt.toUpperCase():null;
 }
-function goDijeCode(txt){
+var _badAt=0;
+function goDijeCode(txt,fromCam){
   var code=parseDijeCode(txt);
-  if(!code){toast('⚠️ Código o QR no válido');return false;}
+  if(!code){
+    var now=Date.now();
+    if(!fromCam||now-_badAt>2500){_badAt=now;toast('⚠️ Ese QR no es de un dije PetCard');}
+    return false;
+  }
   closeScan();
   window.location.href=location.origin+'/dije.html?code='+encodeURIComponent(code);
   return true;
@@ -1384,6 +1407,7 @@ function loadJsQR(cb){
   document.head.appendChild(s);
 }
 function openScan(){
+  if(_anon){toast('Iniciá sesión primero para agregar otra mascota');showAuthModal('login');return;}
   openModal('m-scan');
   document.getElementById('scan-code').value='';
   var msg=document.getElementById('scan-msg');
@@ -1411,7 +1435,7 @@ function scanTick(){
   if(v.readyState>=2&&v.videoWidth){
     if(_scanDet){
       _scanDet.detect(v).then(function(r){
-        if(r&&r.length&&_scanOn&&goDijeCode(r[0].rawValue))return;
+        if(r&&r.length&&_scanOn&&goDijeCode(r[0].rawValue,true))return;
         if(_scanOn)requestAnimationFrame(scanTick);
       }).catch(function(){if(_scanOn)requestAnimationFrame(scanTick);});
       return;
@@ -1421,7 +1445,7 @@ function scanTick(){
       c.width=w;c.height=h;
       var ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,w,h);
       var res=jsQR(ctx.getImageData(0,0,w,h).data,w,h);
-      if(res&&res.data&&goDijeCode(res.data))return;
+      if(res&&res.data&&goDijeCode(res.data,true))return;
     }
   }
   requestAnimationFrame(scanTick);

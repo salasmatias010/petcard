@@ -29,7 +29,7 @@ self.addEventListener('fetch', function(e) {
   if(e.request.method !== 'GET') return;
   
   // index.html siempre desde la red
-  if(e.request.url.includes('index.html') || e.request.url.endsWith('mipetcard.com.ar/') || e.request.url.endsWith('mipetcard.com.ar')){
+  if(e.request.url.includes('index.html') || e.request.url.includes('dije.html') || e.request.url.endsWith('mipetcard.com.ar/') || e.request.url.endsWith('mipetcard.com.ar')){
     e.respondWith(
       fetch(e.request).then(function(response){
         var clone = response.clone();

@@ -6,7 +6,7 @@ firebase.initializeApp({
   projectId: "mipetcard",
   storageBucket: "mipetcard.firebasestorage.app",
   messagingSenderId: "720369332644",
-  appId: "1:720369832644:web:f71bd826ab4d3412211131"
+  appId: "1:720369332644:web:f71bd826ab4d3412211131"
 });
 const messaging = firebase.messaging();
 
