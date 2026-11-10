@@ -164,6 +164,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
   <div style="padding:16px 20px;max-width:480px;margin:0 auto" id="vp-body"></div>
 </div>
 
+<!-- Modal: escanear QR para agregar mascota -->
+<div class="ovl" id="m-scan" onclick="if(event.target===this)closeScan()">
+<div class="modal">
+  <div class="mhandle"></div>
+  <h3>Agregar mascota</h3>
+  <p style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.5">Escaneá el QR del nuevo dije para vincularlo a tu cuenta y completar los datos.</p>
+  <div id="scan-box" style="position:relative;border-radius:14px;overflow:hidden;background:#111;aspect-ratio:1/1;margin-bottom:10px">
+    <video id="scan-video" playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+    <div style="position:absolute;inset:18%;border:3px solid rgba(255,255,255,.85);border-radius:14px;pointer-events:none"></div>
+    <div id="scan-msg" style="position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;font-size:12px;text-shadow:0 1px 3px #000">Apuntá la cámara al QR</div>
+  </div>
+  <canvas id="scan-canvas" style="display:none"></canvas>
+  <div class="fg"><label>¿No podés escanear? Escribí el código del dije</label>
+    <div style="display:flex;gap:8px"><input id="scan-code" placeholder="Ej: AB12CD" autocapitalize="characters" style="text-transform:uppercase"><button class="btn-p" style="flex:none" onclick="goDijeCode(document.getElementById('scan-code').value)">Ir</button></div>
+  </div>
+  <div style="text-align:center;margin:4px 0 12px"><a href="#" onclick="closeScan();openAddPet();return false" style="font-size:12px;color:var(--tx3)">Agregar sin dije (carga manual)</a></div>
+  <div class="mbtns"><button class="btn-s" onclick="closeScan()">Cancelar</button></div>
+</div>
+</div>
+
 <!-- Modal: mascota -->
 <div class="ovl" id="m-addpet" onclick="ovlClose(event,'m-addpet')">
 <div class="modal">
@@ -586,7 +606,11 @@ function renderSel(){
     c.onclick=function(){S.pid=p.id;render();};
     el.appendChild(c);
   });
-
+  var add=document.createElement('div');
+  add.className='pchip-add';
+  add.innerHTML='<span style="font-size:15px;font-weight:700">＋</span>Agregar mascota';
+  add.onclick=openScan;
+  el.appendChild(add);
 }
 function chipStatus(s){
   if(s==='ok')return'<span class="cok">OK</span>';
@@ -594,7 +618,7 @@ function chipStatus(s){
   return'<span class="clate">Vencida</span>';}
 function renderMain(){
   var el=document.getElementById('content'),p=apet();
-  if(!p){el.innerHTML='<div class="empty">No hay mascotas. ¡Agregá una!</div>';return;}
+  if(!p){el.innerHTML='<div class="empty">No hay mascotas. ¡Agregá una!<br><br><button class="btn-p" style="max-width:240px" onclick="openScan()">＋ Agregar mascota</button></div>';return;}
   if(S.nav==='perfil')el.innerHTML=rPerfil(p);
   else if(S.nav==='historial')el.innerHTML=rHist(p);
   else if(S.nav==='recordatorios')el.innerHTML=rRem(p);
@@ -1337,6 +1361,71 @@ fbInit(function(){
     saveFcmToken();
   }
 });
+
+/* ── AGREGAR MASCOTA POR QR ── */
+var _scanStream=null,_scanOn=false,_scanDet=null;
+function parseDijeCode(txt){
+  txt=(txt||'').trim();if(!txt)return null;
+  try{var u=new URL(txt);var c=u.searchParams.get('code');if(c)return c.toUpperCase();return null;}catch(e){}
+  return /^[A-Za-z0-9\-_]{3,40}$/.test(txt)?txt.toUpperCase():null;
+}
+function goDijeCode(txt){
+  var code=parseDijeCode(txt);
+  if(!code){toast('⚠️ Código o QR no válido');return false;}
+  closeScan();
+  window.location.href=location.origin+'/dije.html?code='+encodeURIComponent(code);
+  return true;
+}
+function loadJsQR(cb){
+  if(window.jsQR){cb();return;}
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+  s.onload=cb;s.onerror=function(){cb();};
+  document.head.appendChild(s);
+}
+function openScan(){
+  openModal('m-scan');
+  document.getElementById('scan-code').value='';
+  var msg=document.getElementById('scan-msg');
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg.textContent='Cámara no disponible: usá el código';return;}
+  msg.textContent='Iniciando cámara...';
+  if('BarcodeDetector' in window){try{_scanDet=new BarcodeDetector({formats:['qr_code']});}catch(e){_scanDet=null;}}
+  loadJsQR(function(){
+    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}).then(function(st){
+      _scanStream=st;_scanOn=true;
+      var v=document.getElementById('scan-video');v.srcObject=st;v.play();
+      msg.textContent='Apuntá la cámara al QR';
+      requestAnimationFrame(scanTick);
+    }).catch(function(){msg.textContent='No se pudo usar la cámara: escribí el código';});
+  });
+}
+function closeScan(){
+  _scanOn=false;
+  if(_scanStream){_scanStream.getTracks().forEach(function(t){t.stop();});_scanStream=null;}
+  var v=document.getElementById('scan-video');if(v)v.srcObject=null;
+  closeModal('m-scan');
+}
+function scanTick(){
+  if(!_scanOn)return;
+  var v=document.getElementById('scan-video');
+  if(v.readyState>=2&&v.videoWidth){
+    if(_scanDet){
+      _scanDet.detect(v).then(function(r){
+        if(r&&r.length&&_scanOn&&goDijeCode(r[0].rawValue))return;
+        if(_scanOn)requestAnimationFrame(scanTick);
+      }).catch(function(){if(_scanOn)requestAnimationFrame(scanTick);});
+      return;
+    }
+    if(window.jsQR){
+      var c=document.getElementById('scan-canvas'),w=v.videoWidth,h=v.videoHeight;
+      c.width=w;c.height=h;
+      var ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,w,h);
+      var res=jsQR(ctx.getImageData(0,0,w,h).data,w,h);
+      if(res&&res.data&&goDijeCode(res.data))return;
+    }
+  }
+  requestAnimationFrame(scanTick);
+}
 
 /* ── ACTIVAR DESDE DIJE ── */
 function checkActivar(){
