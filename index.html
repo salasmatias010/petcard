@@ -1443,7 +1443,7 @@ function goDijeCode(txt,fromCam){
     return false;
   }
   closeScan();
-  window.location.href=location.origin+'/dije.html?code='+encodeURIComponent(code);
+  window.location.href=location.origin+'/dije.html?code='+encodeURIComponent(code)+'&v='+Date.now();
   return true;
 }
 function loadJsQR(cb){
