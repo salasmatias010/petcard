@@ -552,7 +552,50 @@ function save(){
     }).catch(function(e){
       console.log('Save error',e);
     });
+    syncDijes();
   }
+}
+
+/* ── SYNC CON LA FICHA PÚBLICA (colección dijes) ── */
+var DIJE_FIELDS=['name','emoji','photo','raza','nacimiento','sexo','cast','peso','sangre','alergia','condicion','vet','tel','tel2','dir'];
+var _dijeLast={};
+function dijePublic(p){
+  var o={};
+  DIJE_FIELDS.forEach(function(k){if(p[k]!==undefined)o[k]=p[k];});
+  o.edad=p.nacimiento?calcEdad(p.nacimiento):(p.edad||'');
+  o.vaccines=(p.vaccines||[]).map(function(v){return{n:v.n||'',d:v.d||'',s:v.s||''};});
+  return o;
+}
+// App → ficha pública: solo escribe si cambió algo visible
+function syncDijes(){
+  if(!_db||!_uid||_anon)return;
+  S.pets.forEach(function(p){
+    if(!p.dijeCode)return;
+    var pub=dijePublic(p),sig=JSON.stringify(pub);
+    if(_dijeLast[p.dijeCode]===sig)return;
+    var now=new Date().toISOString(),upd={updatedAt:now};
+    Object.keys(pub).forEach(function(k){upd['pet.'+k]=pub[k];});
+    _db.collection('dijes').doc(p.dijeCode).update(upd).then(function(){
+      _dijeLast[p.dijeCode]=sig;p.dijeRev=now;save();
+    }).catch(function(e){console.log('Sync dije error',p.dijeCode,e);});
+  });
+}
+// Ficha pública → app: si el dueño editó desde dije.html, traer esos cambios
+function pullDijes(){
+  if(!_db||!_uid||_anon)return;
+  S.pets.forEach(function(p){
+    if(!p.dijeCode)return;
+    _db.collection('dijes').doc(p.dijeCode).get().then(function(doc){
+      if(!doc.exists)return;
+      var d=doc.data();
+      if(!d.updatedAt||d.updatedAt===p.dijeRev||!d.pet)return;
+      DIJE_FIELDS.forEach(function(k){if(d.pet[k]!==undefined)p[k]=d.pet[k];});
+      if(p.nacimiento)p.edad=calcEdad(p.nacimiento);else if(d.pet.edad!==undefined)p.edad=d.pet.edad;
+      p.dijeRev=d.updatedAt;
+      _dijeLast[p.dijeCode]=JSON.stringify(dijePublic(p));
+      save();render();
+    }).catch(function(e){console.log('Pull dije error',e);});
+  });
 }
 
 function load(){
@@ -573,6 +616,7 @@ function loadFromFirebase(){
         // Sync to localStorage
         try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
         checkActivar();
+        pullDijes();
       }
       render();
     } else {
@@ -588,7 +632,10 @@ function loadFromFirebase(){
 }
 
 /* ── RENDER ── */
-function render(){renderSel();renderMain();}
+function render(){
+  S.pets.forEach(function(p){if(p.nacimiento){var e=calcEdad(p.nacimiento);if(e)p.edad=e;}});
+  renderSel();renderMain();
+}
 function fmt(ds){if(!ds)return'';try{var d=new Date(ds+'T12:00:00');return d.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return ds;}}
 function avatarHTML(p,size){
   size=size||64;
@@ -1457,7 +1504,7 @@ function checkActivar(){
   var activar=params.get('activar');
   if(!activar)return;
   try{
-    var bin=atob(activar);
+    var bin=atob(activar.replace(/ /g,'+'));
     var bytes=new Uint8Array(bin.length);
     for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
     var raw=JSON.parse(new TextDecoder().decode(bytes));
@@ -1469,8 +1516,10 @@ function checkActivar(){
     }
     var p={
       id:uid(), name:raw.name, emoji:raw.emoji||'🐾', photo:raw.photo||null,
-      raza:raw.raza||'', edad:raw.edad||'', sexo:raw.sexo||'Macho', cast:raw.cast||'no',
-      peso:raw.peso||'', sangre:raw.sangre||'', alergia:raw.alergia||'Ninguna',
+      raza:raw.raza||'', nacimiento:raw.nacimiento||'',
+      edad:raw.nacimiento?calcEdad(raw.nacimiento):(raw.edad||''),
+      sexo:raw.sexo||'Macho', cast:raw.cast||'no',
+      peso:raw.peso||'', sangre:raw.sangre||'', alergia:raw.alergia||'Ninguna', condicion:raw.condicion||'',
       vet:raw.vet||'', tel:raw.tel||'', tel2:raw.tel2||'', dir:raw.dir||'',
       dijeCode:raw.dijeCode||null,
       vaccines:[], history:[], reminders:[], pesos:[]
