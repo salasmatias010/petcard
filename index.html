@@ -546,7 +546,7 @@ function save(){
   if(_db&&_uid){
     _saving=true;
         _db.collection('usuarios').doc(_uid).set({
-      pets:S.pets, pid:S.pid, updatedAt:new Date().toISOString()
+      pets:S.pets, pid:S.pid, deletedDijes:S.deletedDijes||[], updatedAt:new Date().toISOString()
     },{merge:true}).then(function(){
       _saving=false;
     }).catch(function(e){
@@ -605,11 +605,15 @@ function load(){
   S.nav='perfil'; // siempre arrancar en perfil
 }
 
+var _loadSeq=0;
 function loadFromFirebase(){
   if(!_db||!_uid)return;
+  var seq=++_loadSeq;
   _db.collection('usuarios').doc(_uid).get().then(function(doc){
+    if(seq!==_loadSeq)return; // llegó una respuesta más nueva: ignorar esta
     if(doc.exists){
       var data=doc.data();
+      S.deletedDijes=data.deletedDijes||[];
       if(data.pets&&data.pets.length){
         S.pets=data.pets;
         S.pid=data.pid||data.pets[0].id;
@@ -617,6 +621,8 @@ function loadFromFirebase(){
         try{localStorage.setItem('petcard4',JSON.stringify(S));}catch(e){}
         checkActivar();
         pullDijes();
+      } else {
+        checkActivar();
       }
       render();
     } else {
@@ -624,11 +630,39 @@ function loadFromFirebase(){
       checkActivar();
       render();
     }
+    recoverDijes();
   }).catch(function(e){
     console.log('Load error',e);
     checkActivar();
     render();
   });
+}
+
+// Recupera mascotas activadas a tu nombre (colección dijes) que no están en la lista
+function recoverDijes(){
+  if(!_db||!_uid||_anon)return;
+  _db.collection('dijes').where('ownerKey','==',_uid).get().then(function(snap){
+    var added=0,del=S.deletedDijes||[];
+    snap.forEach(function(doc){
+      var d=doc.data(),code=doc.id,x=d.pet;
+      if(!d.activated||!x)return;
+      if(del.indexOf(code)>=0)return;
+      if(S.pets.some(function(p){return p.dijeCode===code;}))return;
+      var p={
+        id:uid(),name:x.name||'Mascota',emoji:x.emoji||'🐾',photo:x.photo||null,
+        raza:x.raza||'',nacimiento:x.nacimiento||'',
+        edad:x.nacimiento?calcEdad(x.nacimiento):(x.edad||''),
+        sexo:x.sexo||'Macho',cast:x.cast||'no',peso:x.peso||'',sangre:x.sangre||'',
+        alergia:x.alergia||'Ninguna',condicion:x.condicion||'',vet:x.vet||'',
+        tel:x.tel||'',tel2:x.tel2||'',dir:x.dir||'',
+        dijeCode:code,dijeRev:d.updatedAt||'',
+        vaccines:(x.vaccines||[]).map(function(v){return{id:uid(),n:v.n,d:v.d,s:v.s};}),
+        history:[],reminders:[],pesos:[]
+      };
+      S.pets.push(p);if(!S.pid)S.pid=p.id;added++;
+    });
+    if(added){save();render();toast('🐾 Se recuperó '+added+' mascota'+(added>1?'s':'')+' de tu cuenta');}
+  }).catch(function(e){console.log('Recover dijes error',e);});
 }
 
 /* ── RENDER ── */
@@ -987,7 +1021,7 @@ function savePet(){
   else{d.id=uid();d.vaccines=[];d.history=[];d.reminders=[];d.pesos=[];S.pets.push(d);S.pid=d.id;}
   save();closeModal('m-addpet');render();
 }
-function delPet(){var p=apet();if(!p||!confirm('¿Eliminar a '+p.name+'?'))return;S.pets=S.pets.filter(function(x){return x.id!==p.id;});S.pid=S.pets.length?S.pets[0].id:null;save();render();}
+function delPet(){var p=apet();if(!p||!confirm('¿Eliminar a '+p.name+'?'))return;if(p.dijeCode){S.deletedDijes=(S.deletedDijes||[]).concat([p.dijeCode]);}S.pets=S.pets.filter(function(x){return x.id!==p.id;});S.pid=S.pets.length?S.pets[0].id:null;save();render();}
 async function handleVaxFoto(evt){
   var file=evt.target.files[0];if(!file)return;
   var prev=document.getElementById('vx-foto-preview');
@@ -1524,12 +1558,14 @@ function checkActivar(){
       dijeCode:raw.dijeCode||null,
       vaccines:[], history:[], reminders:[], pesos:[]
     };
+    if(p.dijeCode&&S.deletedDijes)S.deletedDijes=S.deletedDijes.filter(function(c){return c!==p.dijeCode;});
     S.pets.push(p);
     S.pid=p.id;
     save();
     setTimeout(function(){toast('🐾 Bienvenido '+p.name+'!');},500);
   }catch(e){
     console.log('Activar error:',e.message);
+    toast('⚠️ No se pudo agregar la mascota: '+e.message);
   }
 }
 
